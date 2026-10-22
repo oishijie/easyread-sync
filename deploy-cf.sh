@@ -63,7 +63,24 @@ npx wrangler d1 execute "$DB_NAME" --remote --yes --file=./schema.sql
 echo "✓ 表已创建"
 
 echo ""
-echo "5️⃣ 设置 JWT_SECRET..."
+echo "5️⃣ 创建 R2 存储桶..."
+R2_OUT=$(printf 'header = "Authorization: Bearer %s"\n' "$CLOUDFLARE_API_TOKEN" \
+  | curl -s --config - -X POST \
+      "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/r2/buckets" \
+      -H "Content-Type: application/json" \
+      -d '{"name":"easyread-snapshots"}')
+if echo "$R2_OUT" | grep -q '"success":true'; then
+    echo "✓ 存储桶已创建"
+elif echo "$R2_OUT" | grep -q 'already exists\|already owned'; then
+    echo "• 存储桶已存在"
+else
+    echo "⚠️  R2 创建返回："
+    echo "$R2_OUT" | head -3
+    echo "   若 R2 未开通，请注释掉 wrangler.toml 中的 [[r2_buckets]] 再部署"
+fi
+
+echo ""
+echo "6️⃣ 设置 JWT_SECRET..."
 if npx wrangler secret list 2>/dev/null | grep -q "JWT_SECRET"; then
     echo "✓ 已存在，跳过"
 else
@@ -72,7 +89,7 @@ else
 fi
 
 echo ""
-echo "6️⃣ 部署 Worker..."
+echo "7️⃣ 部署 Worker..."
 npx wrangler deploy
 
 echo ""

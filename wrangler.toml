@@ -14,13 +14,11 @@ binding = "DB"
 database_name = "easyread-sync"
 database_id = "" # 运行 `wrangler d1 create easyread-sync` 后填入
 
-# R2 存储桶（页面快照用，可选）
-# R2 需要在 Cloudflare 后台单独开通（免费额度也要绑支付方式）。
-# 没开通就先注释掉，核心同步功能不依赖它；开通后取消注释并执行
-#   wrangler r2 bucket create easyread-snapshots
-# [[r2_buckets]]
-# binding = "R2"
-# bucket_name = "easyread-snapshots"
+# R2 存储桶（页面快照用）
+# 需要在 Cloudflare 后台单独开通。未开通时注释掉整段，快照接口会返回 501。
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "easyread-snapshots"
 
 # 非敏感环境变量；JWT_SECRET 用 `wrangler secret put JWT_SECRET` 设置
 [vars]
