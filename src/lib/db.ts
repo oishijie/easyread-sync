@@ -177,15 +177,18 @@ export async function getPageNotes(db: D1Database, userId: string, url: string) 
   };
 }
 
-async function ensureNotesPage(db: D1Database, userId: string, url: string, title: string): Promise<string> {
+async function ensureNotesPage(db: D1Database, userId: string, url: string, title: string, createDateTime?: number): Promise<string> {
   const now = Date.now();
+  // 扩展的页面创建时间等于该页首条笔记的创建时间，取较早的作为页面时间
+  const created = Number.isFinite(createDateTime) ? (createDateTime as number) : now;
   await db.prepare(`
     INSERT INTO notes_pages (id, user_id, url, title, create_datetime, synced_at)
     VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_id, url) DO UPDATE SET
       title = excluded.title,
+      create_datetime = MIN(notes_pages.create_datetime, excluded.create_datetime),
       synced_at = excluded.synced_at
-  `).bind(generateId(), userId, url, title, now, now).run();
+  `).bind(generateId(), userId, url, title, created, now).run();
 
   const row = await db.prepare('SELECT id FROM notes_pages WHERE user_id = ? AND url = ?')
     .bind(userId, url).first();
@@ -201,10 +204,12 @@ export async function upsertNote(
   note: Partial<Note> & { id?: string; createDateTime?: number }
 ) {
   const normalizedUrl = normalizePageUrl(url);
-  const pageId = await ensureNotesPage(db, userId, normalizedUrl, title || normalizedUrl);
   // 扩展侧的笔记主键叫 id，后端列叫 note_id，两者必须对齐才能幂等
   const noteId = note.note_id || note.id || generateId();
   const now = Date.now();
+  const created = note.create_datetime || note.createDateTime || now;
+
+  const pageId = await ensureNotesPage(db, userId, normalizedUrl, title || normalizedUrl, created);
 
   await db.prepare(`
     INSERT INTO notes (id, page_id, user_id, note_id, scope, selection_text, comment,
