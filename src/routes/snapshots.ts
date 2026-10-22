@@ -50,24 +50,28 @@ snapshots.post('/upload', async (c) => {
     const userId = c.get('userId');
     const formData = await c.req.formData();
     
-    const file = formData.get('file') as File;
-    const url = formData.get('url') as string;
-    const title = formData.get('title') as string;
-    const format = formData.get('format') as string;
-    
-    if (!file || !url || !title || !format) {
+    const file = formData.get('file');
+    const url = formData.get('url');
+    const title = formData.get('title');
+    const format = formData.get('format');
+
+    if (!file || typeof file === 'string' || typeof url !== 'string' || typeof title !== 'string' || typeof format !== 'string') {
       return errorResponse('INVALID_REQUEST', 'file, url, title and format are required', 400);
     }
+    if (!['html', 'pdf', 'markdown', 'screenshot'].includes(format)) {
+      return errorResponse('INVALID_REQUEST', 'Unsupported snapshot format', 400);
+    }
+    const upload = file as unknown as File;
     
     // 生成 R2 key
     const snapshotId = generateId();
     const r2Key = `${userId}/${snapshotId}.${format}`;
     
     // 上传到 R2
-    const fileBuffer = await file.arrayBuffer();
+    const fileBuffer = await upload.arrayBuffer();
     await c.env.R2.put(r2Key, fileBuffer, {
       httpMetadata: {
-        contentType: file.type
+        contentType: upload.type
       }
     });
     
@@ -77,7 +81,7 @@ snapshots.post('/upload', async (c) => {
       INSERT INTO snapshots (id, user_id, url, title, format, r2_key, file_size, mime_type, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      snapshotId, userId, url, title, format, r2Key, file.size, file.type, now
+      snapshotId, userId, url, title, format, r2Key, upload.size, upload.type, now
     ).run();
     
     return jsonResponse({

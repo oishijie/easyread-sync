@@ -41,8 +41,8 @@ npx wrangler d1 execute easyread-sync --file=./schema.sql
 # 4. 创建 R2 存储桶
 npx wrangler r2 bucket create easyread-snapshots
 
-# 5. 设置 JWT 密钥（在 wrangler.toml 中）
-# JWT_SECRET = "your-32-char-secret-key"
+# 5. 设置 JWT 密钥（Worker Secret，不写进仓库）
+openssl rand -base64 32 | npx wrangler secret put JWT_SECRET
 
 # 6. 部署
 npx wrangler deploy
@@ -97,7 +97,7 @@ A: 检查 Cloudflare Dashboard 中的 Worker 是否已部署成功，查看 Work
 A: 确保 wrangler.toml 中的 database_id 正确填写
 
 ### Q: JWT 认证失败？
-A: 检查 JWT_SECRET 是否已设置（至少 32 位字符）
+A: 确认已执行 `npx wrangler secret put JWT_SECRET`，本地开发检查 `.dev.vars` 是否存在
 
 ### Q: CORS 错误？
 A: 开发环境设置 `CORS_ORIGIN = "*"`，生产环境改为具体域名

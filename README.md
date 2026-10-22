@@ -4,13 +4,13 @@
 
 ## 功能特性
 
-- ✅ 用户认证（JWT）
+- ✅ 用户认证（JWT + PBKDF2 密码哈希）
 - ✅ 稍后阅读列表同步
 - ✅ 页面笔记同步
 - ✅ 访问记录同步
-- ✅ 全量/增量数据同步
-- 🚧 页面快照上传到 R2（待实现）
-- 🚧 Web UI 界面（待实现）
+- ✅ 全量/增量数据同步（幂等写入 + 删除墓碑）
+- ✅ 页面快照上传到 R2
+- ✅ Web Dashboard（部署后直接在网址打开）
 
 ## 快速开始
 
@@ -42,11 +42,10 @@ npm run r2:create
 
 ### 5. 设置 JWT 密钥
 
-编辑 `wrangler.toml`，设置强随机的 `JWT_SECRET`：
+密钥通过 Worker Secret 保存，不要写进仓库：
 
-```toml
-[vars]
-JWT_SECRET = "your-super-secret-random-key-here"
+```bash
+openssl rand -base64 32 | npx wrangler secret put JWT_SECRET
 ```
 
 ### 6. 本地开发
@@ -55,11 +54,14 @@ JWT_SECRET = "your-super-secret-random-key-here"
 # 本地初始化数据库（首次运行）
 npm run db:init:local
 
+# 复制本地开发用的密钥
+cp .dev.vars.example .dev.vars
+
 # 启动开发服务器
 npm run dev
 ```
 
-访问 `http://localhost:8787`
+访问 `http://localhost:8787` 即是 Web Dashboard。
 
 ### 7. 部署到 Cloudflare
 

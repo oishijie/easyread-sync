@@ -56,19 +56,18 @@ npx wrangler d1 execute easyread-sync --file=./schema.sql
 npx wrangler r2 bucket create easyread-snapshots
 ```
 
-## 步骤 6：配置 JWT 密钥
+## 步骤 6：设置 JWT 密钥
 
-编辑 `wrangler.toml`，设置强随机的 JWT_SECRET：
+密钥不要写进 `wrangler.toml`，用 Worker Secret 保存：
 
-```toml
-[vars]
-JWT_SECRET = "your-super-secret-random-key-at-least-32-chars"
-CORS_ORIGIN = "*"
+```bash
+openssl rand -base64 32 | npx wrangler secret put JWT_SECRET
 ```
 
-生成强密钥：
-```bash
-openssl rand -base64 32
+本地开发时用 `.dev.vars` 文件（已在 `.gitignore` 中）：
+
+```
+JWT_SECRET="dev-secret-key-change-in-production"
 ```
 
 ## 步骤 7：部署到 Cloudflare
@@ -124,7 +123,7 @@ npm run dev
 
 ### 问题：JWT 认证失败
 
-解决：确保 `JWT_SECRET` 已设置且足够强（至少 32 位）。
+解决：确认已通过 `wrangler secret put JWT_SECRET` 设置密钥，本地开发检查 `.dev.vars` 是否存在。
 
 ## 生产环境建议
 

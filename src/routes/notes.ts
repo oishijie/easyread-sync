@@ -1,7 +1,7 @@
 // Notes Routes
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { getNotesPages, getPageNotes, createNote, deleteNote } from '../lib/db';
+import { getNotesPages, getPageNotes, upsertNote, deleteNote } from '../lib/db';
 import { errorResponse, jsonResponse } from '../lib/cors';
 
 const notes = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
@@ -51,7 +51,7 @@ notes.post('/', async (c) => {
       return errorResponse('INVALID_REQUEST', 'url, title and note are required', 400);
     }
     
-    const id = await createNote(c.env.DB, userId, url, title, note);
+    const id = await upsertNote(c.env.DB, userId, url, title, note);
     
     return jsonResponse({ id, created: true }, 201);
   } catch (error) {

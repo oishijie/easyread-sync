@@ -1,47 +1,49 @@
 // Auth Routes
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { generateToken, hashPassword } from '../lib/auth';
+import { generateToken, hashPassword, verifyPassword } from '../lib/auth';
 import { generateId } from '../lib/db';
 import { errorResponse, jsonResponse } from '../lib/cors';
 
 const auth = new Hono<{ Bindings: Env }>();
 
+function normalizeEmail(value: unknown): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
 // 注册
 auth.post('/register', async (c) => {
   try {
-    const { email, password } = await c.req.json();
-    
+    const body = await c.req.json();
+    const email = normalizeEmail(body.email);
+    const password = typeof body.password === 'string' ? body.password : '';
+
     if (!email || !password) {
       return errorResponse('INVALID_REQUEST', 'Email and password required', 400);
     }
-    
-    // 检查用户是否已存在
+    if (password.length < 8) {
+      return errorResponse('INVALID_REQUEST', 'Password must be at least 8 characters', 400);
+    }
+
     const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?')
       .bind(email).first();
-    
+
     if (existing) {
       return errorResponse('CONFLICT', 'User already exists', 409);
     }
-    
-    // 创建用户
+
     const userId = generateId();
     const passwordHash = await hashPassword(password);
     const now = Date.now();
-    
+
     await c.env.DB.prepare(`
-      INSERT INTO users (id, email, created_at, updated_at)
-      VALUES (?, ?, ?, ?)
-    `).bind(userId, email, now, now).run();
-    
-    // 生成 token
+      INSERT INTO users (id, email, password_hash, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(userId, email, passwordHash, now, now).run();
+
     const token = await generateToken(userId, c.env.JWT_SECRET);
-    
-    return jsonResponse({
-      token,
-      user_id: userId
-    }, 201);
-    
+
+    return jsonResponse({ token, user_id: userId }, 201);
   } catch (error) {
     console.error('Register error:', error);
     return errorResponse('SERVER_ERROR', 'Registration failed', 500);
@@ -51,29 +53,25 @@ auth.post('/register', async (c) => {
 // 登录
 auth.post('/login', async (c) => {
   try {
-    const { email, password } = await c.req.json();
-    
+    const body = await c.req.json();
+    const email = normalizeEmail(body.email);
+    const password = typeof body.password === 'string' ? body.password : '';
+
     if (!email || !password) {
       return errorResponse('INVALID_REQUEST', 'Email and password required', 400);
     }
-    
-    const passwordHash = await hashPassword(password);
-    
-    const user = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?')
+
+    const user = await c.env.DB.prepare('SELECT id, password_hash FROM users WHERE email = ?')
       .bind(email).first();
-    
-    if (!user) {
+
+    // 用户不存在与密码错误返回同一响应，避免账号枚举
+    const valid = user ? await verifyPassword(password, user.password_hash as string) : false;
+    if (!valid) {
       return errorResponse('UNAUTHORIZED', 'Invalid credentials', 401);
     }
-    
-    // 生成 token
-    const token = await generateToken(user.id as string, c.env.JWT_SECRET);
-    
-    return jsonResponse({
-      token,
-      user_id: user.id
-    });
-    
+
+    const token = await generateToken(user!.id as string, c.env.JWT_SECRET);
+    return jsonResponse({ token, user_id: user!.id });
   } catch (error) {
     console.error('Login error:', error);
     return errorResponse('SERVER_ERROR', 'Login failed', 500);

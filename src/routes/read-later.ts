@@ -1,7 +1,7 @@
 // Read Later Routes
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { getReadLaters, createReadLater, updateReadLater, deleteReadLater } from '../lib/db';
+import { getReadLaters, upsertReadLater, updateReadLater, deleteReadLater } from '../lib/db';
 import { errorResponse, jsonResponse } from '../lib/cors';
 
 const readLater = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
@@ -33,7 +33,7 @@ readLater.post('/', async (c) => {
       return errorResponse('INVALID_REQUEST', 'key, url and title are required', 400);
     }
     
-    const id = await createReadLater(c.env.DB, userId, data);
+    const id = await upsertReadLater(c.env.DB, userId, data);
     
     return jsonResponse({ id, created: true }, 201);
   } catch (error) {

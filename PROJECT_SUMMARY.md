@@ -53,14 +53,15 @@ easyread-sync/
 ```
 
 ### 🗄️ 数据库 Schema
-6 张表：
-- `users` - 用户表
+8 张表：
+- `users` - 用户表（PBKDF2 密码哈希）
 - `read_laters` - 稍后阅读
 - `all_records` - 访问记录
 - `notes_pages` - 笔记页面
 - `notes` - 笔记内容
 - `snapshots` - 页面快照元数据
 - `sync_metadata` - 同步元数据
+- `tombstones` - 删除墓碑（跨设备同步删除）
 
 ### 🔌 API 端点
 
@@ -145,10 +146,11 @@ curl -X POST https://your-worker.workers.dev/api/auth/login \
 
 ## 🔒 安全特性
 
-- JWT Token 认证
+- JWT Token 认证（HMAC-SHA256 签名）
+- 密码 PBKDF2-SHA256 加盐哈希，登录时定长比较
 - 用户数据隔离（user_id）
+- 登录失败不区分「账号不存在 / 密码错误」，避免账号枚举
 - CORS 配置
-- 密码哈希（SHA-256，生产建议用 bcrypt）
 
 ## 🎯 下一步优化方向
 
@@ -163,7 +165,6 @@ curl -X POST https://your-worker.workers.dev/api/auth/login \
 - [ ] 同步日志与错误追踪
 - [ ] 数据导出/导入工具
 - [ ] 搜索功能
-
 ### 低优先级
 - [ ] 移动端 PWA 应用
 - [ ] 浏览器扩展市场上架

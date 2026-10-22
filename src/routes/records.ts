@@ -16,7 +16,7 @@ records.get('/', async (c) => {
     const result = await c.env.DB.prepare(`
       SELECT url, title, datetime FROM all_records 
       WHERE user_id = ?
-      ORDER BY id DESC
+      ORDER BY synced_at DESC
       LIMIT ? OFFSET ?
     `).bind(userId, limit, offset).all();
     

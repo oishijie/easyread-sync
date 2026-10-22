@@ -135,6 +135,13 @@
     let token = localStorage.getItem('easyread_token');
     let userId = localStorage.getItem('easyread_user_id');
 
+    // 页面标题与 URL 来自任意网页，插入 DOM 前必须转义
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
     // 登录表单
     function renderLogin() {
       return `
@@ -164,7 +171,7 @@
           <div class="header">
             <h1>🔖 EasyRead Sync Dashboard</h1>
             <div class="user-info">
-              User ID: ${userId} | 
+              User ID: ${esc(userId)} | 
               <a href="#" onclick="handleLogout()">Logout</a>
             </div>
           </div>
@@ -315,8 +322,8 @@
         document.getElementById('readLater').innerHTML = data.items.map(item => `
           <div class="list-item">
             <div>
-              <div class="item-title">${item.title}</div>
-              <div class="item-url">${item.url}</div>
+              <div class="item-title">${esc(item.title)}</div>
+              <div class="item-url">${esc(item.url)}</div>
               <div class="item-meta">Status: ${['Unread', 'Reading', 'Read'][item.status]}</div>
             </div>
             <button class="btn btn-danger" onclick="deleteReadLater('${item.id}')">Delete</button>
@@ -341,8 +348,8 @@
         document.getElementById('notes').innerHTML = data.pages.map(page => `
           <div class="list-item">
             <div>
-              <div class="item-title">${page.title}</div>
-              <div class="item-url">${page.url}</div>
+              <div class="item-title">${esc(page.title)}</div>
+              <div class="item-url">${esc(page.url)}</div>
               <div class="item-meta">${page.notes_count} notes</div>
             </div>
           </div>
@@ -366,8 +373,8 @@
         document.getElementById('records').innerHTML = data.records.map(record => `
           <div class="list-item">
             <div>
-              <div class="item-title">${record.title}</div>
-              <div class="item-url">${record.url}</div>
+              <div class="item-title">${esc(record.title)}</div>
+              <div class="item-url">${esc(record.url)}</div>
               <div class="item-meta">Visits: ${record.visitCount}</div>
             </div>
           </div>
@@ -391,12 +398,12 @@
         document.getElementById('snapshots').innerHTML = data.snapshots.map(snap => `
           <div class="list-item">
             <div>
-              <div class="item-title">${snap.title}</div>
-              <div class="item-url">${snap.url}</div>
+              <div class="item-title">${esc(snap.title)}</div>
+              <div class="item-url">${esc(snap.url)}</div>
               <div class="item-meta">Format: ${snap.format} | Size: ${(snap.fileSize / 1024).toFixed(1)} KB</div>
             </div>
             <div>
-              <a href="${snap.downloadUrl}" class="btn btn-primary">Download</a>
+              <a href="${esc(snap.downloadUrl)}" class="btn btn-primary">Download</a>
               <button class="btn btn-danger" onclick="deleteSnapshot('${snap.id}')">Delete</button>
             </div>
           </div>

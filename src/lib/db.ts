@@ -1,5 +1,5 @@
 // 数据库工具函数
-import type { Env, ReadLater, AllRecord, NotesPage, Note } from '../types';
+import type { ReadLater, Note } from '../types';
 
 export function generateId(): string {
   return crypto.randomUUID();
@@ -10,24 +10,22 @@ export function normalizePageUrl(url: string): string {
   return url.split('#')[0].toLowerCase().trim();
 }
 
-// ReadLater 数据库操作
+// ---------- Read Later ----------
+
 export async function getReadLaters(db: D1Database, userId: string, status?: number, limit = 50, offset = 0) {
   let query = 'SELECT * FROM read_laters WHERE user_id = ?';
   const params: any[] = [userId];
-  
+
   if (status !== undefined) {
     query += ' AND status = ?';
     params.push(status);
   }
-  
+
   query += ' ORDER BY create_datetime DESC LIMIT ? OFFSET ?';
   params.push(limit, offset);
-  
+
   const result = await db.prepare(query).bind(...params).all();
-  
-  const items = result.results?.map(row => parseReadLater(row)) || [];
-  
-  // 获取总数
+
   let countQuery = 'SELECT COUNT(*) as total FROM read_laters WHERE user_id = ?';
   const countParams: any[] = [userId];
   if (status !== undefined) {
@@ -35,36 +33,47 @@ export async function getReadLaters(db: D1Database, userId: string, status?: num
     countParams.push(status);
   }
   const countResult = await db.prepare(countQuery).bind(...countParams).first();
-  
+
   return {
-    items,
-    total: countResult?.total || 0
+    items: (result.results || []).map(row => parseReadLater(row)),
+    total: (countResult?.total as number) || 0
   };
 }
 
-export async function createReadLater(db: D1Database, userId: string, data: Partial<ReadLater>) {
-  const id = generateId();
+// 按 (user_id, key) 幂等写入，重复同步不会产生重复行
+export async function upsertReadLater(db: D1Database, userId: string, data: Partial<ReadLater> & { key: string; url: string; title: string }) {
   const now = Date.now();
-  
   await db.prepare(`
-    INSERT INTO read_laters (id, user_id, key, url, title, create_datetime, status, 
+    INSERT INTO read_laters (id, user_id, key, url, title, create_datetime, status,
       position_progress, position_scroll_x, position_scroll_y, synced_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, key) DO UPDATE SET
+      url = excluded.url,
+      title = excluded.title,
+      status = excluded.status,
+      position_progress = excluded.position_progress,
+      position_scroll_x = excluded.position_scroll_x,
+      position_scroll_y = excluded.position_scroll_y,
+      synced_at = excluded.synced_at
   `).bind(
-    id, userId, data.key, data.url, data.title, data.create_datetime || now,
-    data.status || 0,
-    data.position?.progress, data.position?.scrollX, data.position?.scrollY,
+    generateId(), userId, data.key, data.url, data.title,
+    data.create_datetime || now,
+    data.status ?? 0,
+    data.position?.progress ?? null,
+    data.position?.scrollX ?? null,
+    data.position?.scrollY ?? null,
     now
   ).run();
-  
-  return id;
+
+  const row = await db.prepare('SELECT id FROM read_laters WHERE user_id = ? AND key = ?')
+    .bind(userId, data.key).first();
+  await clearTombstone(db, userId, 'read_later', data.key);
+  return row?.id as string;
 }
 
 export async function updateReadLater(db: D1Database, userId: string, id: string, data: Partial<ReadLater>) {
-  const now = Date.now();
-  
   await db.prepare(`
-    UPDATE read_laters 
+    UPDATE read_laters
     SET status = COALESCE(?, status),
         position_progress = ?,
         position_scroll_x = ?,
@@ -72,43 +81,60 @@ export async function updateReadLater(db: D1Database, userId: string, id: string
         synced_at = ?
     WHERE id = ? AND user_id = ?
   `).bind(
-    data.status,
-    data.position?.progress, data.position?.scrollX, data.position?.scrollY,
-    now, id, userId
+    data.status ?? null,
+    data.position?.progress ?? null,
+    data.position?.scrollX ?? null,
+    data.position?.scrollY ?? null,
+    Date.now(), id, userId
   ).run();
 }
 
 export async function deleteReadLater(db: D1Database, userId: string, id: string) {
-  await db.prepare('DELETE FROM read_laters WHERE id = ? AND user_id = ?')
-    .bind(id, userId).run();
+  const row = await db.prepare('SELECT key FROM read_laters WHERE id = ? AND user_id = ?')
+    .bind(id, userId).first();
+  await db.prepare('DELETE FROM read_laters WHERE id = ? AND user_id = ?').bind(id, userId).run();
+  if (row?.key) await addTombstone(db, userId, 'read_later', row.key as string);
 }
 
-// AllRecords 数据库操作
+// ---------- All Records ----------
+
 export async function syncAllRecords(db: D1Database, userId: string, records: Record<string, any>) {
   const now = Date.now();
   let synced = 0;
-  
-  for (const [url, record] of Object.entries(records)) {
-    const id = generateId();
-    
+
+  for (const record of Object.values(records)) {
+    if (!record || typeof record !== 'object') continue;
+    const url = typeof record.url === 'string' ? record.url : '';
+    if (!url) continue;
+
     await db.prepare(`
-      INSERT OR REPLACE INTO all_records 
-      (id, user_id, url, title, datetime, position_progress, position_scroll_x, position_scroll_y, synced_at)
+      INSERT INTO all_records (id, user_id, url, title, datetime,
+        position_progress, position_scroll_x, position_scroll_y, synced_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, url) DO UPDATE SET
+        title = excluded.title,
+        datetime = excluded.datetime,
+        position_progress = excluded.position_progress,
+        position_scroll_x = excluded.position_scroll_x,
+        position_scroll_y = excluded.position_scroll_y,
+        synced_at = excluded.synced_at
     `).bind(
-      id, userId, record.url, record.title,
-      JSON.stringify(record.datetime || []),
-      record.position?.progress, record.position?.scrollX, record.position?.scrollY,
+      generateId(), userId, url, record.title || url,
+      JSON.stringify(Array.isArray(record.datetime) ? record.datetime : []),
+      record.position?.progress ?? null,
+      record.position?.scrollX ?? null,
+      record.position?.scrollY ?? null,
       now
     ).run();
-    
+
     synced++;
   }
-  
+
   return synced;
 }
 
-// Notes 数据库操作
+// ---------- Notes ----------
+
 export async function getNotesPages(db: D1Database, userId: string, limit = 50, offset = 0) {
   const result = await db.prepare(`
     SELECT np.*, COUNT(n.id) as notes_count
@@ -119,74 +145,121 @@ export async function getNotesPages(db: D1Database, userId: string, limit = 50, 
     ORDER BY np.create_datetime DESC
     LIMIT ? OFFSET ?
   `).bind(userId, limit, offset).all();
-  
+
   const countResult = await db.prepare('SELECT COUNT(*) as total FROM notes_pages WHERE user_id = ?')
     .bind(userId).first();
-  
+
   return {
     pages: result.results || [],
-    total: countResult?.total || 0
+    total: (countResult?.total as number) || 0
   };
 }
 
 export async function getPageNotes(db: D1Database, userId: string, url: string) {
   const normalizedUrl = normalizePageUrl(url);
-  
+
   const page = await db.prepare('SELECT * FROM notes_pages WHERE user_id = ? AND url = ?')
     .bind(userId, normalizedUrl).first();
-  
-  if (!page) {
-    return null;
-  }
-  
+
+  if (!page) return null;
+
   const notes = await db.prepare('SELECT * FROM notes WHERE page_id = ? ORDER BY create_datetime')
     .bind(page.id).all();
-  
+
   return {
     url: page.url,
     title: page.title,
-    notes: notes.results?.map(row => parseNote(row)) || []
+    notes: (notes.results || []).map(row => parseNote(row))
   };
 }
 
-export async function createNote(db: D1Database, userId: string, url: string, title: string, note: Partial<Note>) {
-  const normalizedUrl = normalizePageUrl(url);
+async function ensureNotesPage(db: D1Database, userId: string, url: string, title: string): Promise<string> {
   const now = Date.now();
-  
-  // 确保 page 存在
-  let page = await db.prepare('SELECT id FROM notes_pages WHERE user_id = ? AND url = ?')
-    .bind(userId, normalizedUrl).first();
-  
-  if (!page) {
-    const pageId = generateId();
-    await db.prepare(`
-      INSERT INTO notes_pages (id, user_id, url, title, create_datetime, synced_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(pageId, userId, normalizedUrl, title, now, now).run();
-    page = { id: pageId };
-  }
-  
-  const noteId = generateId();
   await db.prepare(`
-    INSERT INTO notes (id, page_id, user_id, note_id, scope, selection_text, comment, 
-      author, prefix, suffix, text_position, create_datetime, synced_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO notes_pages (id, user_id, url, title, create_datetime, synced_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, url) DO UPDATE SET
+      title = excluded.title,
+      synced_at = excluded.synced_at
+  `).bind(generateId(), userId, url, title, now, now).run();
+
+  const row = await db.prepare('SELECT id FROM notes_pages WHERE user_id = ? AND url = ?')
+    .bind(userId, url).first();
+  return row?.id as string;
+}
+
+// 按 (user_id, note_id) 幂等写入，note_id 取扩展侧的原始 ID
+export async function upsertNote(db: D1Database, userId: string, url: string, title: string, note: Partial<Note>) {
+  const normalizedUrl = normalizePageUrl(url);
+  const pageId = await ensureNotesPage(db, userId, normalizedUrl, title || normalizedUrl);
+  const noteId = note.note_id || generateId();
+  const now = Date.now();
+
+  await db.prepare(`
+    INSERT INTO notes (id, page_id, user_id, note_id, scope, selection_text, comment,
+      author, prefix, suffix, text_position, create_datetime, updated_at, synced_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, note_id) DO UPDATE SET
+      page_id = excluded.page_id,
+      scope = excluded.scope,
+      selection_text = excluded.selection_text,
+      comment = excluded.comment,
+      author = excluded.author,
+      prefix = excluded.prefix,
+      suffix = excluded.suffix,
+      text_position = excluded.text_position,
+      updated_at = excluded.updated_at,
+      synced_at = excluded.synced_at
   `).bind(
-    noteId, page.id, userId, note.note_id || noteId, note.scope || 'text',
-    note.selection_text, note.comment, note.author,
-    note.prefix, note.suffix, note.text_position,
-    note.create_datetime || now, now
+    generateId(), pageId, userId, noteId, note.scope || 'text',
+    note.selection_text ?? null, note.comment ?? null, note.author ?? null,
+    note.prefix ?? null, note.suffix ?? null, note.text_position ?? null,
+    note.create_datetime || now, note.updated_at ?? null, now
   ).run();
-  
+
+  await clearTombstone(db, userId, 'note', noteId);
   return noteId;
 }
 
 export async function deleteNote(db: D1Database, userId: string, noteId: string) {
-  await db.prepare('DELETE FROM notes WHERE id = ? AND user_id = ?')
-    .bind(noteId, userId).run();
+  const row = await db.prepare('SELECT note_id FROM notes WHERE id = ? AND user_id = ?')
+    .bind(noteId, userId).first();
+  await db.prepare('DELETE FROM notes WHERE id = ? AND user_id = ?').bind(noteId, userId).run();
+  if (row?.note_id) await addTombstone(db, userId, 'note', row.note_id as string);
 }
 
-// 解析函数
+// ---------- Tombstones ----------
+
+async function addTombstone(db: D1Database, userId: string, entity: string, entityKey: string) {
+  await db.prepare(`
+    INSERT INTO tombstones (id, user_id, entity, entity_key, deleted_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, entity, entity_key) DO UPDATE SET deleted_at = excluded.deleted_at
+  `).bind(generateId(), userId, entity, entityKey, Date.now()).run();
+}
+
+// 重新添加同一条数据时清掉墓碑，避免下次拉取时被误删
+async function clearTombstone(db: D1Database, userId: string, entity: string, entityKey: string) {
+  await db.prepare('DELETE FROM tombstones WHERE user_id = ? AND entity = ? AND entity_key = ?')
+    .bind(userId, entity, entityKey).run();
+}
+
+export async function getTombstones(db: D1Database, userId: string, since: number) {
+  const result = await db.prepare(
+    'SELECT entity, entity_key FROM tombstones WHERE user_id = ? AND deleted_at > ?'
+  ).bind(userId, since).all();
+
+  const readLaters: string[] = [];
+  const notes: string[] = [];
+  for (const row of result.results || []) {
+    if (row.entity === 'read_later') readLaters.push(row.entity_key as string);
+    else if (row.entity === 'note') notes.push(row.entity_key as string);
+  }
+  return { readLaters, notes };
+}
+
+// ---------- Helpers ----------
+
 function parseReadLater(row: any): ReadLater {
   return {
     id: row.id,
