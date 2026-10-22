@@ -23,12 +23,15 @@ records.get('/', async (c) => {
     const countResult = await c.env.DB.prepare('SELECT COUNT(*) as total FROM all_records WHERE user_id = ?')
       .bind(userId).first();
     
-    const records = result.results?.map(row => ({
-      url: row.url,
-      title: row.title,
-      datetime: JSON.parse(row.datetime as string || '[]'),
-      visitCount: JSON.parse(row.datetime as string || '[]').length
-    })) || [];
+    const records = result.results?.map(row => {
+      const datetimes = JSON.parse((row.datetime as string) || '[]');
+      return {
+        url: row.url,
+        title: row.title,
+        datetimes,
+        visitCount: datetimes.length
+      };
+    }) || [];
     
     return jsonResponse({
       records,

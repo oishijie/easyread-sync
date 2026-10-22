@@ -6,6 +6,15 @@ import { errorResponse, jsonResponse } from '../lib/cors';
 
 const sync = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
+// 全为空时不输出 position，避免覆盖本地已有的阅读进度
+function positionOf(row: any) {
+  const progress = row.position_progress;
+  const scrollX = row.position_scroll_x;
+  const scrollY = row.position_scroll_y;
+  if (progress == null && scrollX == null && scrollY == null) return null;
+  return { progress, scrollX, scrollY };
+}
+
 // 全量同步（把本地数据推到云端，幂等：重复调用不会产生重复行）
 sync.post('/full', async (c) => {
   try {
@@ -66,7 +75,7 @@ sync.get('/pull', async (c) => {
     ).bind(userId, since).all();
 
     const notesResult = await c.env.DB.prepare(`
-      SELECT n.*, np.url AS page_url, np.title AS page_title
+      SELECT n.*, np.url AS page_url, np.title AS page_title, np.create_datetime AS page_create_datetime
       FROM notes n
       JOIN notes_pages np ON n.page_id = np.id
       WHERE n.user_id = ? AND n.synced_at > ?
@@ -74,31 +83,32 @@ sync.get('/pull', async (c) => {
 
     const deletedIds = await getTombstones(c.env.DB, userId, since);
 
-    const readLaters = (readLatersResult.results || []).map(row => ({
-      key: row.key,
-      url: row.url,
-      title: row.title,
-      createDateTime: row.create_datetime,
-      status: row.status,
-      position: {
-        progress: row.position_progress,
-        scrollX: row.position_scroll_x,
-        scrollY: row.position_scroll_y
-      }
-    }));
+    // 输出字段名对齐 EasyRead 本地存储：allRecords 用 datetimes，readLaters 带 start/endReadDateTime
+    const readLaters = (readLatersResult.results || []).map(row => {
+      const item: Record<string, any> = {
+        key: row.key,
+        url: row.url,
+        title: row.title,
+        createDateTime: row.create_datetime,
+        status: row.status
+      };
+      if (row.start_read_datetime != null) item.startReadDateTime = row.start_read_datetime;
+      if (row.end_read_datetime != null) item.endReadDateTime = row.end_read_datetime;
+      const position = positionOf(row);
+      if (position) item.position = position;
+      return item;
+    });
 
     const allRecords: Record<string, any> = {};
     for (const row of recordsResult.results || []) {
-      allRecords[row.url as string] = {
+      const item: Record<string, any> = {
         url: row.url,
         title: row.title,
-        datetime: JSON.parse((row.datetime as string) || '[]'),
-        position: {
-          progress: row.position_progress,
-          scrollX: row.position_scroll_x,
-          scrollY: row.position_scroll_y
-        }
+        datetimes: JSON.parse((row.datetime as string) || '[]')
       };
+      const position = positionOf(row);
+      if (position) item.position = position;
+      allRecords[row.url as string] = item;
     }
 
     const notes: Record<string, any> = {};
@@ -107,21 +117,22 @@ sync.get('/pull', async (c) => {
       notes[url] ||= {
         url,
         title: row.page_title,
-        createDateTime: row.create_datetime,
+        createDateTime: row.page_create_datetime,
         notes: []
       };
-      notes[url].notes.push({
+      const note: Record<string, any> = {
         id: row.note_id,
         scope: row.scope,
-        selectionText: row.selection_text,
-        comment: row.comment,
-        author: row.author,
-        prefix: row.prefix,
-        suffix: row.suffix,
-        textPosition: row.text_position,
-        createDateTime: row.create_datetime,
-        updatedAt: row.updated_at
-      });
+        createDateTime: row.create_datetime
+      };
+      if (row.selection_text != null) note.selectionText = row.selection_text;
+      if (row.comment != null) note.comment = row.comment;
+      if (row.author != null) note.author = row.author;
+      if (row.prefix != null) note.prefix = row.prefix;
+      if (row.suffix != null) note.suffix = row.suffix;
+      if (row.text_position != null) note.textPosition = row.text_position;
+      if (row.updated_at != null) note.updatedAt = row.updated_at;
+      notes[url].notes.push(note);
     }
 
     return jsonResponse({

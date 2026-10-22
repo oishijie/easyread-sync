@@ -41,7 +41,11 @@ export async function getReadLaters(db: D1Database, userId: string, status?: num
 }
 
 // 按 (user_id, key) 幂等写入，重复同步不会产生重复行
-export async function upsertReadLater(db: D1Database, userId: string, data: Partial<ReadLater> & { key: string; url: string; title: string }) {
+export async function upsertReadLater(
+  db: D1Database,
+  userId: string,
+  data: Partial<ReadLater> & { key: string; url: string; title: string; createDateTime?: number }
+) {
   const now = Date.now();
   await db.prepare(`
     INSERT INTO read_laters (id, user_id, key, url, title, create_datetime, status,
@@ -57,7 +61,7 @@ export async function upsertReadLater(db: D1Database, userId: string, data: Part
       synced_at = excluded.synced_at
   `).bind(
     generateId(), userId, data.key, data.url, data.title,
-    data.create_datetime || now,
+    data.create_datetime ?? data.createDateTime ?? now,
     data.status ?? 0,
     data.position?.progress ?? null,
     data.position?.scrollX ?? null,
@@ -120,7 +124,7 @@ export async function syncAllRecords(db: D1Database, userId: string, records: Re
         synced_at = excluded.synced_at
     `).bind(
       generateId(), userId, url, record.title || url,
-      JSON.stringify(Array.isArray(record.datetime) ? record.datetime : []),
+      JSON.stringify(Array.isArray(record.datetimes) ? record.datetimes : Array.isArray(record.datetime) ? record.datetime : []),
       record.position?.progress ?? null,
       record.position?.scrollX ?? null,
       record.position?.scrollY ?? null,
@@ -189,10 +193,17 @@ async function ensureNotesPage(db: D1Database, userId: string, url: string, titl
 }
 
 // 按 (user_id, note_id) 幂等写入，note_id 取扩展侧的原始 ID
-export async function upsertNote(db: D1Database, userId: string, url: string, title: string, note: Partial<Note>) {
+export async function upsertNote(
+  db: D1Database,
+  userId: string,
+  url: string,
+  title: string,
+  note: Partial<Note> & { id?: string; createDateTime?: number }
+) {
   const normalizedUrl = normalizePageUrl(url);
   const pageId = await ensureNotesPage(db, userId, normalizedUrl, title || normalizedUrl);
-  const noteId = note.note_id || generateId();
+  // 扩展侧的笔记主键叫 id，后端列叫 note_id，两者必须对齐才能幂等
+  const noteId = note.note_id || note.id || generateId();
   const now = Date.now();
 
   await db.prepare(`
@@ -214,7 +225,7 @@ export async function upsertNote(db: D1Database, userId: string, url: string, ti
     generateId(), pageId, userId, noteId, note.scope || 'text',
     note.selection_text ?? null, note.comment ?? null, note.author ?? null,
     note.prefix ?? null, note.suffix ?? null, note.text_position ?? null,
-    note.create_datetime || now, note.updated_at ?? null, now
+    note.create_datetime || note.createDateTime || now, note.updated_at ?? null, now
   ).run();
 
   await clearTombstone(db, userId, 'note', noteId);

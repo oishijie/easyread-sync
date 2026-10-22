@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS all_records (
     user_id TEXT NOT NULL,
     url TEXT NOT NULL,
     title TEXT NOT NULL,
-    datetime TEXT NOT NULL, -- JSON array of timestamps
+    datetime TEXT NOT NULL, -- JSON array of timestamps（对外字段名 datetimes）
     position_progress REAL,
     position_scroll_x INTEGER,
     position_scroll_y INTEGER,
