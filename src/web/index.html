@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EasyRead Sync - Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header h1 { color: #333; margin-bottom: 10px; }
+    .header .user-info { color: #666; font-size: 14px; }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      background: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .tab:hover { background: #f0f0f0; }
+    .tab.active { background: #ff6b35; color: white; }
+    .content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      min-height: 400px;
+    }
+    .section { display: none; }
+    .section.active { display: block; }
+    .list-item {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item:hover { background: #f9f9f9; }
+    .item-title { font-weight: 500; color: #333; margin-bottom: 5px; }
+    .item-url { font-size: 12px; color: #999; }
+    .item-meta { font-size: 12px; color: #666; }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #ff6b35; color: white; }
+    .btn-primary:hover { background: #e85a24; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-danger:hover { background: #c82333; }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    .login-form {
+      max-width: 400px;
+      margin: 100px auto;
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .login-form h2 { margin-bottom: 30px; text-align: center; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; color: #333; }
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #ff6b35;
+    }
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: #ff6b35;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .login-btn:hover { background: #e85a24; }
+    .error { color: #dc3545; font-size: 14px; margin-top: 10px; }
+    .loading { text-align: center; padding: 40px; color: #999; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-card h3 { font-size: 32px; margin-bottom: 5px; }
+    .stat-card p { font-size: 14px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    const API_BASE = window.location.origin + '/api';
+    let token = localStorage.getItem('easyread_token');
+    let userId = localStorage.getItem('easyread_user_id');
+
+    // 登录表单
+    function renderLogin() {
+      return `
+        <div class="login-form">
+          <h2>🔖 EasyRead Sync</h2>
+          <form id="loginForm">
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="email" required>
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="login-btn">Login</button>
+            <button type="button" class="login-btn" style="margin-top: 10px; background: #6c757d;" onclick="handleRegister()">Register</button>
+            <div id="loginError" class="error"></div>
+          </form>
+        </div>
+      `;
+    }
+
+    // 主界面
+    function renderDashboard() {
+      return `
+        <div class="container">
+          <div class="header">
+            <h1>🔖 EasyRead Sync Dashboard</h1>
+            <div class="user-info">
+              User ID: ${userId} | 
+              <a href="#" onclick="handleLogout()">Logout</a>
+            </div>
+          </div>
+
+          <div class="stats" id="stats"></div>
+
+          <div class="tabs">
+            <button class="tab active" onclick="switchTab('readLater')">Read Later</button>
+            <button class="tab" onclick="switchTab('notes')">Notes</button>
+            <button class="tab" onclick="switchTab('records')">Records</button>
+            <button class="tab" onclick="switchTab('snapshots')">Snapshots</button>
+          </div>
+
+          <div class="content">
+            <div id="readLater" class="section active"></div>
+            <div id="notes" class="section"></div>
+            <div id="records" class="section"></div>
+            <div id="snapshots" class="section"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 切换标签
+    window.switchTab = function(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tab).classList.add('active');
+      
+      if (tab === 'readLater') loadReadLater();
+      else if (tab === 'notes') loadNotes();
+      else if (tab === 'records') loadRecords();
+      else if (tab === 'snapshots') loadSnapshots();
+    };
+
+    // API 请求
+    async function apiRequest(endpoint, options = {}) {
+      const response = await fetch(API_BASE + endpoint, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+          ...options.headers
+        }
+      });
+      
+      if (response.status === 401) {
+        localStorage.removeItem('easyread_token');
+        localStorage.removeItem('easyread_user_id');
+        location.reload();
+      }
+      
+      return response.json();
+    }
+
+    // 登录
+    document.addEventListener('submit', async (e) => {
+      if (e.target.id === 'loginForm') {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        try {
+          const data = await apiRequest('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+          });
+          
+          if (data.token) {
+            localStorage.setItem('easyread_token', data.token);
+            localStorage.setItem('easyread_user_id', data.user_id);
+            location.reload();
+          }
+        } catch (error) {
+          document.getElementById('loginError').textContent = 'Login failed';
+        }
+      }
+    });
+
+    // 注册
+    window.handleRegister = async function() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      try {
+        const data = await apiRequest('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        
+        if (data.token) {
+          localStorage.setItem('easyread_token', data.token);
+          localStorage.setItem('easyread_user_id', data.user_id);
+          location.reload();
+        }
+      } catch (error) {
+        document.getElementById('loginError').textContent = 'Registration failed';
+      }
+    };
+
+    // 登出
+    window.handleLogout = function() {
+      localStorage.removeItem('easyread_token');
+      localStorage.removeItem('easyread_user_id');
+      location.reload();
+    };
+
+    // 加载统计
+    async function loadStats() {
+      try {
+        const [readLater, notes, records] = await Promise.all([
+          apiRequest('/read-later?limit=1'),
+          apiRequest('/notes?limit=1'),
+          apiRequest('/records?limit=1')
+        ]);
+        
+        document.getElementById('stats').innerHTML = `
+          <div class="stat-card">
+            <h3>${readLater.total || 0}</h3>
+            <p>Read Later Items</p>
+          </div>
+          <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <h3>${notes.total || 0}</h3>
+            <p>Note Pages</p>
+          </div>
+          <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <h3>${records.total || 0}</h3>
+            <p>Visit Records</p>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+      }
+    }
+
+    // 加载稍后阅读
+    async function loadReadLater() {
+      document.getElementById('readLater').innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const data = await apiRequest('/read-later?limit=50');
+        
+        if (!data.items || data.items.length === 0) {
+          document.getElementById('readLater').innerHTML = '<div class="empty-state">No read later items</div>';
+          return;
+        }
+        
+        document.getElementById('readLater').innerHTML = data.items.map(item => `
+          <div class="list-item">
+            <div>
+              <div class="item-title">${item.title}</div>
+              <div class="item-url">${item.url}</div>
+              <div class="item-meta">Status: ${['Unread', 'Reading', 'Read'][item.status]}</div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteReadLater('${item.id}')">Delete</button>
+          </div>
+        `).join('');
+      } catch (error) {
+        document.getElementById('readLater').innerHTML = '<div class="error">Failed to load</div>';
+      }
+    }
+
+    // 加载笔记
+    async function loadNotes() {
+      document.getElementById('notes').innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const data = await apiRequest('/notes?limit=50');
+        
+        if (!data.pages || data.pages.length === 0) {
+          document.getElementById('notes').innerHTML = '<div class="empty-state">No notes</div>';
+          return;
+        }
+        
+        document.getElementById('notes').innerHTML = data.pages.map(page => `
+          <div class="list-item">
+            <div>
+              <div class="item-title">${page.title}</div>
+              <div class="item-url">${page.url}</div>
+              <div class="item-meta">${page.notes_count} notes</div>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        document.getElementById('notes').innerHTML = '<div class="error">Failed to load</div>';
+      }
+    }
+
+    // 加载访问记录
+    async function loadRecords() {
+      document.getElementById('records').innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const data = await apiRequest('/records?limit=50');
+        
+        if (!data.records || data.records.length === 0) {
+          document.getElementById('records').innerHTML = '<div class="empty-state">No records</div>';
+          return;
+        }
+        
+        document.getElementById('records').innerHTML = data.records.map(record => `
+          <div class="list-item">
+            <div>
+              <div class="item-title">${record.title}</div>
+              <div class="item-url">${record.url}</div>
+              <div class="item-meta">Visits: ${record.visitCount}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        document.getElementById('records').innerHTML = '<div class="error">Failed to load</div>';
+      }
+    }
+
+    // 加载快照
+    async function loadSnapshots() {
+      document.getElementById('snapshots').innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const data = await apiRequest('/snapshots?limit=50');
+        
+        if (!data.snapshots || data.snapshots.length === 0) {
+          document.getElementById('snapshots').innerHTML = '<div class="empty-state">No snapshots</div>';
+          return;
+        }
+        
+        document.getElementById('snapshots').innerHTML = data.snapshots.map(snap => `
+          <div class="list-item">
+            <div>
+              <div class="item-title">${snap.title}</div>
+              <div class="item-url">${snap.url}</div>
+              <div class="item-meta">Format: ${snap.format} | Size: ${(snap.fileSize / 1024).toFixed(1)} KB</div>
+            </div>
+            <div>
+              <a href="${snap.downloadUrl}" class="btn btn-primary">Download</a>
+              <button class="btn btn-danger" onclick="deleteSnapshot('${snap.id}')">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        document.getElementById('snapshots').innerHTML = '<div class="error">Failed to load</div>';
+      }
+    }
+
+    // 删除操作
+    window.deleteReadLater = async function(id) {
+      if (!confirm('Delete this item?')) return;
+      await apiRequest(`/read-later/${id}`, { method: 'DELETE' });
+      loadReadLater();
+    };
+
+    window.deleteSnapshot = async function(id) {
+      if (!confirm('Delete this snapshot?')) return;
+      await apiRequest(`/snapshots/${id}`, { method: 'DELETE' });
+      loadSnapshots();
+    };
+
+    // 初始化
+    function init() {
+      if (!token) {
+        document.getElementById('app').innerHTML = renderLogin();
+      } else {
+        document.getElementById('app').innerHTML = renderDashboard();
+        loadStats();
+        loadReadLater();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
