@@ -49,6 +49,12 @@ snapshots.post('/upload', async (c) => {
   try {
     const userId = c.get('userId');
     const formData = await c.req.formData();
+
+    // R2 需要在 Cloudflare 后台单独开通，未绑定时明确报错而不是让整个请求崩掉
+    const bucket = c.env.R2;
+    if (!bucket) {
+      return errorResponse('R2_NOT_CONFIGURED', 'Snapshot storage is not configured', 501);
+    }
     
     const file = formData.get('file');
     const url = formData.get('url');
@@ -69,7 +75,7 @@ snapshots.post('/upload', async (c) => {
     
     // 上传到 R2
     const fileBuffer = await upload.arrayBuffer();
-    await c.env.R2.put(r2Key, fileBuffer, {
+    await bucket.put(r2Key, fileBuffer, {
       httpMetadata: {
         contentType: upload.type
       }
@@ -108,7 +114,7 @@ snapshots.get('/:id/download', async (c) => {
       return errorResponse('NOT_FOUND', 'Snapshot not found', 404);
     }
     
-    const object = await c.env.R2.get(snapshot.r2_key as string);
+    const object = await c.env.R2?.get(snapshot.r2_key as string);
     
     if (!object) {
       return errorResponse('NOT_FOUND', 'File not found in storage', 404);
@@ -141,8 +147,8 @@ snapshots.delete('/:id', async (c) => {
       return errorResponse('NOT_FOUND', 'Snapshot not found', 404);
     }
     
-    // 从 R2 删除
-    await c.env.R2.delete(snapshot.r2_key as string);
+    // 从 R2 删除（未配置 R2 时只剩元数据，直接删库）
+    await c.env.R2?.delete(snapshot.r2_key as string);
     
     // 从数据库删除
     await c.env.DB.prepare('DELETE FROM snapshots WHERE id = ? AND user_id = ?')

@@ -50,11 +50,18 @@ database_id = "粘贴你的 database_id"
 npx wrangler d1 execute easyread-sync --file=./schema.sql
 ```
 
-## 步骤 5：创建 R2 存储桶
+## 步骤 5：（可选）创建 R2 存储桶
+
+只有页面快照功能需要 R2，且 R2 必须在 Cloudflare 后台单独开通（免费额度也要绑支付方式）。
+未开通时直接跳过，`wrangler.toml` 默认不绑定 R2，核心同步功能不受影响。
+
+开通后执行：
 
 ```bash
 npx wrangler r2 bucket create easyread-snapshots
 ```
+
+再取消 `wrangler.toml` 中 `[[r2_buckets]]` 整段的注释，重新部署。
 
 ## 步骤 6：设置 JWT 密钥
 

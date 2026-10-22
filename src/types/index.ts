@@ -2,7 +2,8 @@
 
 export interface Env {
   DB: D1Database;
-  R2: R2Bucket;
+  // 可选：R2 需在 Cloudflare 后台单独开通，未开通时不绑定
+  R2?: R2Bucket;
   JWT_SECRET: string;
   CORS_ORIGIN: string;
 }

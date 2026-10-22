@@ -34,10 +34,16 @@ npm run db:create
 npm run db:init
 ```
 
-### 4. 创建 R2 存储桶
+### 4. （可选）创建 R2 存储桶
+
+只有页面快照功能需要 R2。R2 要在 Cloudflare 后台单独开通（免费额度也要绑支付方式），
+没开通就跳过这步——默认 `wrangler.toml` 里 R2 绑定是注释掉的，核心同步功能不受影响。
+
+开通后：
 
 ```bash
 npm run r2:create
+# 然后取消 wrangler.toml 中 [[r2_buckets]] 的注释并重新部署
 ```
 
 ### 5. 设置 JWT 密钥
