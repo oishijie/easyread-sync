@@ -11,6 +11,9 @@ function normalizeEmail(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
+// 只做边界校验，不追求 RFC 完备
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // 注册
 auth.post('/register', async (c) => {
   try {
@@ -20,6 +23,9 @@ auth.post('/register', async (c) => {
 
     if (!email || !password) {
       return errorResponse('INVALID_REQUEST', 'Email and password required', 400);
+    }
+    if (!EMAIL_PATTERN.test(email)) {
+      return errorResponse('INVALID_REQUEST', 'Enter a valid email address', 400);
     }
     if (password.length < 8) {
       return errorResponse('INVALID_REQUEST', 'Password must be at least 8 characters', 400);
