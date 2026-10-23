@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EasyRead Sync - Dashboard</title>
+  <title>EasyRead Sync</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -18,14 +18,24 @@
       border-radius: 8px;
       margin-bottom: 20px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .header h1 { color: #333; margin-bottom: 10px; }
-    .header .user-info { color: #666; font-size: 14px; }
-    .tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
-      margin-bottom: 20px;
+      align-items: center;
+      justify-content: space-between;
     }
+    .header h1 { color: #333; font-size: 20px; }
+    .header .user-info { color: #666; font-size: 14px; display: flex; gap: 12px; align-items: center; }
+    .header a { color: #ff6b35; text-decoration: none; }
+    .langSelect {
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 13px;
+      color: #333;
+    }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .tab {
       padding: 10px 20px;
       background: white;
@@ -52,12 +62,13 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
     }
     .list-item:last-child { border-bottom: none; }
     .list-item:hover { background: #f9f9f9; }
-    .item-title { font-weight: 500; color: #333; margin-bottom: 5px; }
-    .item-url { font-size: 12px; color: #999; }
-    .item-meta { font-size: 12px; color: #666; }
+    .item-title { font-weight: 500; color: #333; margin-bottom: 5px; overflow-wrap: anywhere; }
+    .item-url { font-size: 12px; color: #999; overflow-wrap: anywhere; }
+    .item-meta { font-size: 12px; color: #666; margin-top: 4px; }
     .btn {
       padding: 8px 16px;
       border: none;
@@ -65,25 +76,26 @@
       cursor: pointer;
       font-size: 14px;
       transition: all 0.2s;
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-block;
     }
     .btn-primary { background: #ff6b35; color: white; }
     .btn-primary:hover { background: #e85a24; }
     .btn-danger { background: #dc3545; color: white; }
     .btn-danger:hover { background: #c82333; }
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #999;
-    }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
     .login-form {
       max-width: 400px;
-      margin: 100px auto;
+      margin: 80px auto;
       background: white;
       padding: 40px;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    .login-form h2 { margin-bottom: 30px; text-align: center; }
+    .login-top { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+    .login-form h2 { margin-bottom: 8px; text-align: center; }
+    .login-form .hint { text-align: center; color: #888; font-size: 13px; margin-bottom: 24px; }
     .form-group { margin-bottom: 20px; }
     .form-group label { display: block; margin-bottom: 8px; color: #333; }
     .form-group input {
@@ -93,10 +105,7 @@
       border-radius: 4px;
       font-size: 14px;
     }
-    .form-group input:focus {
-      outline: none;
-      border-color: #ff6b35;
-    }
+    .form-group input:focus { outline: none; border-color: #ff6b35; }
     .login-btn {
       width: 100%;
       padding: 12px;
@@ -108,7 +117,9 @@
       cursor: pointer;
     }
     .login-btn:hover { background: #e85a24; }
-    .error { color: #dc3545; font-size: 14px; margin-top: 10px; }
+    .login-btn.secondary { background: #6c757d; margin-top: 10px; }
+    .login-btn.secondary:hover { background: #5a6268; }
+    .error { color: #dc3545; font-size: 14px; margin-top: 10px; min-height: 18px; }
     .loading { text-align: center; padding: 40px; color: #999; }
     .stats {
       display: grid;
@@ -134,6 +145,93 @@
     const API_BASE = window.location.origin + '/api';
     let token = localStorage.getItem('easyread_token');
     let userId = localStorage.getItem('easyread_user_id');
+    let lang = localStorage.getItem('easyread_lang')
+      || ((navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+
+    const I18N = {
+      en: {
+        appTitle: 'EasyRead Sync',
+        loginTitle: 'EasyRead Sync',
+        loginHint: 'Create an account first, then sign in.',
+        email: 'Email',
+        password: 'Password (at least 8 characters)',
+        login: 'Sign in',
+        register: 'Create account',
+        userId: 'User ID',
+        logout: 'Sign out',
+        tabReadLater: 'Read Later',
+        tabNotes: 'Notes',
+        tabRecords: 'History',
+        tabSnapshots: 'Snapshots',
+        statReadLater: 'Read Later Items',
+        statNotes: 'Note Pages',
+        statRecords: 'Visited Pages',
+        loading: 'Loading…',
+        emptyReadLater: 'No read later items',
+        emptyNotes: 'No notes yet',
+        emptyRecords: 'No history yet',
+        emptySnapshots: 'No snapshots yet',
+        loadFailed: 'Failed to load',
+        statusUnread: 'Unread',
+        statusReading: 'Reading',
+        statusRead: 'Read',
+        visits: 'Visits',
+        notesCount: 'notes',
+        format: 'Format',
+        size: 'Size',
+        download: 'Download',
+        delete: 'Delete',
+        confirmItem: 'Delete this item?',
+        confirmSnapshot: 'Delete this snapshot?',
+        errBadCredentials: 'Incorrect email or password.',
+        errEmailExists: 'This email is already registered — sign in instead.',
+        errPasswordShort: 'Password must be at least 8 characters.',
+        errNetwork: 'Cannot reach the server.',
+        errGeneric: 'Request failed.'
+      },
+      zh: {
+        appTitle: 'EasyRead Sync 云端同步',
+        loginTitle: 'EasyRead Sync',
+        loginHint: '首次使用请先「注册」，已有账号直接「登录」。',
+        email: '邮箱',
+        password: '密码（至少 8 位）',
+        login: '登录',
+        register: '注册',
+        userId: '用户 ID',
+        logout: '退出登录',
+        tabReadLater: '稍后阅读',
+        tabNotes: '笔记',
+        tabRecords: '浏览记录',
+        tabSnapshots: '页面快照',
+        statReadLater: '稍后阅读',
+        statNotes: '笔记页面',
+        statRecords: '访问页面',
+        loading: '加载中…',
+        emptyReadLater: '还没有稍后阅读',
+        emptyNotes: '还没有笔记',
+        emptyRecords: '还没有浏览记录',
+        emptySnapshots: '还没有页面快照',
+        loadFailed: '加载失败',
+        statusUnread: '未读',
+        statusReading: '阅读中',
+        statusRead: '已读',
+        visits: '访问次数',
+        notesCount: '条笔记',
+        format: '格式',
+        size: '大小',
+        download: '下载',
+        delete: '删除',
+        confirmItem: '确定删除这一项？',
+        confirmSnapshot: '确定删除这个快照？',
+        errBadCredentials: '邮箱或密码错误。还没有账号请先注册。',
+        errEmailExists: '该邮箱已注册，请直接登录。',
+        errPasswordShort: '密码至少 8 位。',
+        errNetwork: '无法连接服务器。',
+        errGeneric: '请求失败。'
+      }
+    };
+
+    const t = key => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
 
     // 页面标题与 URL 来自任意网页，插入 DOM 前必须转义
     function esc(value) {
@@ -142,47 +240,55 @@
       }[c]));
     }
 
-    // 登录表单
+    function langSelect() {
+      return `<select id="langSelect" class="langSelect" aria-label="Language">
+        <option value="en"${lang === 'en' ? ' selected' : ''}>English</option>
+        <option value="zh"${lang === 'zh' ? ' selected' : ''}>简体中文</option>
+      </select>`;
+    }
+
     function renderLogin() {
       return `
         <div class="login-form">
-          <h2>🔖 EasyRead Sync</h2>
+          <div class="login-top">${langSelect()}</div>
+          <h2>🔖 ${esc(t('loginTitle'))}</h2>
+          <p class="hint">${esc(t('loginHint'))}</p>
           <form id="loginForm">
             <div class="form-group">
-              <label>Email</label>
-              <input type="email" id="email" required>
+              <label for="email">${esc(t('email'))}</label>
+              <input type="email" id="email" required autocomplete="username">
             </div>
             <div class="form-group">
-              <label>Password</label>
-              <input type="password" id="password" required>
+              <label for="password">${esc(t('password'))}</label>
+              <input type="password" id="password" required autocomplete="current-password">
             </div>
-            <button type="submit" class="login-btn">Login</button>
-            <button type="button" class="login-btn" style="margin-top: 10px; background: #6c757d;" onclick="handleRegister()">Register</button>
+            <button type="submit" class="login-btn">${esc(t('login'))}</button>
+            <button type="button" class="login-btn secondary" id="btnRegister">${esc(t('register'))}</button>
             <div id="loginError" class="error"></div>
           </form>
         </div>
       `;
     }
 
-    // 主界面
     function renderDashboard() {
       return `
         <div class="container">
           <div class="header">
-            <h1>🔖 EasyRead Sync Dashboard</h1>
+            <h1>🔖 ${esc(t('appTitle'))}</h1>
             <div class="user-info">
-              User ID: ${esc(userId)} | 
-              <a href="#" onclick="handleLogout()">Logout</a>
+              ${esc(t('userId'))}: ${esc(userId)} |
+              <a href="#" id="btnLogout">${esc(t('logout'))}</a>
+              ${langSelect()}
             </div>
           </div>
 
           <div class="stats" id="stats"></div>
 
           <div class="tabs">
-            <button class="tab active" onclick="switchTab('readLater')">Read Later</button>
-            <button class="tab" onclick="switchTab('notes')">Notes</button>
-            <button class="tab" onclick="switchTab('records')">Records</button>
-            <button class="tab" onclick="switchTab('snapshots')">Snapshots</button>
+            <button class="tab active" data-tab="readLater">${esc(t('tabReadLater'))}</button>
+            <button class="tab" data-tab="notes">${esc(t('tabNotes'))}</button>
+            <button class="tab" data-tab="records">${esc(t('tabRecords'))}</button>
+            <button class="tab" data-tab="snapshots">${esc(t('tabSnapshots'))}</button>
           </div>
 
           <div class="content">
@@ -195,92 +301,134 @@
       `;
     }
 
-    // 切换标签
-    window.switchTab = function(tab) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      event.target.classList.add('active');
-      document.getElementById(tab).classList.add('active');
-      
-      if (tab === 'readLater') loadReadLater();
-      else if (tab === 'notes') loadNotes();
-      else if (tab === 'records') loadRecords();
-      else if (tab === 'snapshots') loadSnapshots();
-    };
-
-    // API 请求
     async function apiRequest(endpoint, options = {}) {
       const response = await fetch(API_BASE + endpoint, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
           ...options.headers
         }
       });
-      
-      if (response.status === 401) {
+
+      const data = await response.json().catch(() => null);
+
+      // 登录/注册的 401 是「密码错」，不能当成会话失效去清 token 重载页面
+      const isAuthCall = endpoint.startsWith('/auth/');
+      if (response.status === 401 && !isAuthCall) {
         localStorage.removeItem('easyread_token');
         localStorage.removeItem('easyread_user_id');
         location.reload();
+        return null;
       }
-      
-      return response.json();
+
+      if (!response.ok) {
+        const error = new Error(data?.message || data?.error || `HTTP ${response.status}`);
+        error.code = data?.error;
+        error.status = response.status;
+        throw error;
+      }
+      return data;
     }
 
-    // 登录
-    document.addEventListener('submit', async (e) => {
-      if (e.target.id === 'loginForm') {
-        e.preventDefault();
+    function describeError(error) {
+      if (!error) return t('errGeneric');
+      if (error.code === 'CONFLICT') return t('errEmailExists');
+      if (error.code === 'UNAUTHORIZED') return t('errBadCredentials');
+      if (error.code === 'INVALID_REQUEST') {
+        return /8 characters/i.test(error.message || '') ? t('errPasswordShort') : (error.message || t('errGeneric'));
+      }
+      if (error.name === 'TypeError' || /Failed to fetch|NetworkError/i.test(error.message || '')) return t('errNetwork');
+      return error.message || t('errGeneric');
+    }
+
+    function setLoginError(message) {
+      const box = document.getElementById('loginError');
+      if (box) box.textContent = message;
+    }
+
+    function handleSubmit() {
+      document.addEventListener('submit', async (event) => {
+        if (event.target.id !== 'loginForm') return;
+        event.preventDefault();
+        setLoginError('');
+
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-        
+
         try {
           const data = await apiRequest('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password })
           });
-          
-          if (data.token) {
-            localStorage.setItem('easyread_token', data.token);
-            localStorage.setItem('easyread_user_id', data.user_id);
-            location.reload();
-          }
-        } catch (error) {
-          document.getElementById('loginError').textContent = 'Login failed';
-        }
-      }
-    });
-
-    // 注册
-    window.handleRegister = async function() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      
-      try {
-        const data = await apiRequest('/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({ email, password })
-        });
-        
-        if (data.token) {
           localStorage.setItem('easyread_token', data.token);
           localStorage.setItem('easyread_user_id', data.user_id);
           location.reload();
+        } catch (error) {
+          setLoginError(describeError(error));
         }
-      } catch (error) {
-        document.getElementById('loginError').textContent = 'Registration failed';
-      }
-    };
+      });
 
-    // 登出
-    window.handleLogout = function() {
-      localStorage.removeItem('easyread_token');
-      localStorage.removeItem('easyread_user_id');
-      location.reload();
-    };
+      document.addEventListener('click', async (event) => {
+        if (event.target.id === 'btnRegister') {
+          setLoginError('');
+          const email = document.getElementById('email').value;
+          const password = document.getElementById('password').value;
 
-    // 加载统计
+          if (password.length < 8) {
+            setLoginError(t('errPasswordShort'));
+            return;
+          }
+
+          try {
+            const data = await apiRequest('/auth/register', {
+              method: 'POST',
+              body: JSON.stringify({ email, password })
+            });
+            localStorage.setItem('easyread_token', data.token);
+            localStorage.setItem('easyread_user_id', data.user_id);
+            location.reload();
+          } catch (error) {
+            setLoginError(describeError(error));
+          }
+          return;
+        }
+
+        if (event.target.id === 'btnLogout') {
+          event.preventDefault();
+          localStorage.removeItem('easyread_token');
+          localStorage.removeItem('easyread_user_id');
+          location.reload();
+          return;
+        }
+
+        const tab = event.target.closest('.tab');
+        if (tab) switchTab(tab.dataset.tab);
+      });
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
+      document.querySelectorAll('.section').forEach(section => section.classList.toggle('active', section.id === name));
+      if (name === 'readLater') loadReadLater();
+      else if (name === 'notes') loadNotes();
+      else if (name === 'records') loadRecords();
+      else if (name === 'snapshots') loadSnapshots();
+    }
+
+    function itemRow(title, url, meta, actions) {
+      return `
+        <div class="list-item">
+          <div>
+            <div class="item-title">${esc(title)}</div>
+            <div class="item-url">${esc(url)}</div>
+            ${meta ? `<div class="item-meta">${esc(meta)}</div>` : ''}
+          </div>
+          <div>${actions || ''}</div>
+        </div>
+      `;
+    }
+
     async function loadStats() {
       try {
         const [readLater, notes, records] = await Promise.all([
@@ -288,19 +436,19 @@
           apiRequest('/notes?limit=1'),
           apiRequest('/records?limit=1')
         ]);
-        
+
         document.getElementById('stats').innerHTML = `
           <div class="stat-card">
-            <h3>${readLater.total || 0}</h3>
-            <p>Read Later Items</p>
+            <h3>${readLater?.total || 0}</h3>
+            <p>${esc(t('statReadLater'))}</p>
           </div>
           <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-            <h3>${notes.total || 0}</h3>
-            <p>Note Pages</p>
+            <h3>${notes?.total || 0}</h3>
+            <p>${esc(t('statNotes'))}</p>
           </div>
           <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-            <h3>${records.total || 0}</h3>
-            <p>Visit Records</p>
+            <h3>${records?.total || 0}</h3>
+            <p>${esc(t('statRecords'))}</p>
           </div>
         `;
       } catch (error) {
@@ -308,135 +456,117 @@
       }
     }
 
-    // 加载稍后阅读
+    function showLoading(id) {
+      document.getElementById(id).innerHTML = `<div class="loading">${esc(t('loading'))}</div>`;
+    }
+
+    function showEmpty(id, key) {
+      document.getElementById(id).innerHTML = `<div class="empty-state">${esc(t(key))}</div>`;
+    }
+
+    function showError(id) {
+      document.getElementById(id).innerHTML = `<div class="empty-state">${esc(t('loadFailed'))}</div>`;
+    }
+
     async function loadReadLater() {
-      document.getElementById('readLater').innerHTML = '<div class="loading">Loading...</div>';
+      showLoading('readLater');
       try {
         const data = await apiRequest('/read-later?limit=50');
-        
-        if (!data.items || data.items.length === 0) {
-          document.getElementById('readLater').innerHTML = '<div class="empty-state">No read later items</div>';
-          return;
-        }
-        
-        document.getElementById('readLater').innerHTML = data.items.map(item => `
-          <div class="list-item">
-            <div>
-              <div class="item-title">${esc(item.title)}</div>
-              <div class="item-url">${esc(item.url)}</div>
-              <div class="item-meta">Status: ${['Unread', 'Reading', 'Read'][item.status]}</div>
-            </div>
-            <button class="btn btn-danger" onclick="deleteReadLater('${item.id}')">Delete</button>
-          </div>
-        `).join('');
+        if (!data.items || data.items.length === 0) { showEmpty('readLater', 'emptyReadLater'); return; }
+        const statusLabel = [t('statusUnread'), t('statusReading'), t('statusRead')];
+        document.getElementById('readLater').innerHTML = data.items.map(item =>
+          itemRow(item.title, item.url, statusLabel[item.status] || statusLabel[0],
+            `<button class="btn btn-danger" data-delete-readlater="${esc(item.id)}">${esc(t('delete'))}</button>`)
+        ).join('');
       } catch (error) {
-        document.getElementById('readLater').innerHTML = '<div class="error">Failed to load</div>';
+        showError('readLater');
       }
     }
 
-    // 加载笔记
     async function loadNotes() {
-      document.getElementById('notes').innerHTML = '<div class="loading">Loading...</div>';
+      showLoading('notes');
       try {
         const data = await apiRequest('/notes?limit=50');
-        
-        if (!data.pages || data.pages.length === 0) {
-          document.getElementById('notes').innerHTML = '<div class="empty-state">No notes</div>';
-          return;
-        }
-        
-        document.getElementById('notes').innerHTML = data.pages.map(page => `
-          <div class="list-item">
-            <div>
-              <div class="item-title">${esc(page.title)}</div>
-              <div class="item-url">${esc(page.url)}</div>
-              <div class="item-meta">${page.notes_count} notes</div>
-            </div>
-          </div>
-        `).join('');
+        if (!data.pages || data.pages.length === 0) { showEmpty('notes', 'emptyNotes'); return; }
+        document.getElementById('notes').innerHTML = data.pages.map(page =>
+          itemRow(page.title, page.url, `${page.notes_count} ${t('notesCount')}`)
+        ).join('');
       } catch (error) {
-        document.getElementById('notes').innerHTML = '<div class="error">Failed to load</div>';
+        showError('notes');
       }
     }
 
-    // 加载访问记录
     async function loadRecords() {
-      document.getElementById('records').innerHTML = '<div class="loading">Loading...</div>';
+      showLoading('records');
       try {
         const data = await apiRequest('/records?limit=50');
-        
-        if (!data.records || data.records.length === 0) {
-          document.getElementById('records').innerHTML = '<div class="empty-state">No records</div>';
-          return;
-        }
-        
-        document.getElementById('records').innerHTML = data.records.map(record => `
-          <div class="list-item">
-            <div>
-              <div class="item-title">${esc(record.title)}</div>
-              <div class="item-url">${esc(record.url)}</div>
-              <div class="item-meta">Visits: ${record.visitCount}</div>
-            </div>
-          </div>
-        `).join('');
+        if (!data.records || data.records.length === 0) { showEmpty('records', 'emptyRecords'); return; }
+        document.getElementById('records').innerHTML = data.records.map(record =>
+          itemRow(record.title, record.url, `${t('visits')}: ${record.visitCount}`)
+        ).join('');
       } catch (error) {
-        document.getElementById('records').innerHTML = '<div class="error">Failed to load</div>';
+        showError('records');
       }
     }
 
-    // 加载快照
     async function loadSnapshots() {
-      document.getElementById('snapshots').innerHTML = '<div class="loading">Loading...</div>';
+      showLoading('snapshots');
       try {
         const data = await apiRequest('/snapshots?limit=50');
-        
-        if (!data.snapshots || data.snapshots.length === 0) {
-          document.getElementById('snapshots').innerHTML = '<div class="empty-state">No snapshots</div>';
+        if (!data.snapshots || data.snapshots.length === 0) { showEmpty('snapshots', 'emptySnapshots'); return; }
+        document.getElementById('snapshots').innerHTML = data.snapshots.map(snap =>
+          itemRow(snap.title, snap.url,
+            `${t('format')}: ${snap.format} | ${t('size')}: ${(snap.fileSize / 1024).toFixed(1)} KB`,
+            `<a class="btn btn-primary" href="${esc(snap.downloadUrl)}">${esc(t('download'))}</a>
+             <button class="btn btn-danger" data-delete-snapshot="${esc(snap.id)}">${esc(t('delete'))}</button>`)
+        ).join('');
+      } catch (error) {
+        showError('snapshots');
+      }
+    }
+
+    function handleActions() {
+      document.addEventListener('click', async (event) => {
+        const readLaterId = event.target.dataset?.deleteReadlater;
+        if (readLaterId) {
+          if (!confirm(t('confirmItem'))) return;
+          await apiRequest(`/read-later/${readLaterId}`, { method: 'DELETE' });
+          loadReadLater();
           return;
         }
-        
-        document.getElementById('snapshots').innerHTML = data.snapshots.map(snap => `
-          <div class="list-item">
-            <div>
-              <div class="item-title">${esc(snap.title)}</div>
-              <div class="item-url">${esc(snap.url)}</div>
-              <div class="item-meta">Format: ${snap.format} | Size: ${(snap.fileSize / 1024).toFixed(1)} KB</div>
-            </div>
-            <div>
-              <a href="${esc(snap.downloadUrl)}" class="btn btn-primary">Download</a>
-              <button class="btn btn-danger" onclick="deleteSnapshot('${snap.id}')">Delete</button>
-            </div>
-          </div>
-        `).join('');
-      } catch (error) {
-        document.getElementById('snapshots').innerHTML = '<div class="error">Failed to load</div>';
-      }
+
+        const snapshotId = event.target.dataset?.deleteSnapshot;
+        if (snapshotId) {
+          if (!confirm(t('confirmSnapshot'))) return;
+          await apiRequest(`/snapshots/${snapshotId}`, { method: 'DELETE' });
+          loadSnapshots();
+        }
+      });
+
+      document.addEventListener('change', (event) => {
+        if (event.target.id !== 'langSelect') return;
+        lang = event.target.value === 'zh' ? 'zh' : 'en';
+        localStorage.setItem('easyread_lang', lang);
+        init();
+      });
     }
 
-    // 删除操作
-    window.deleteReadLater = async function(id) {
-      if (!confirm('Delete this item?')) return;
-      await apiRequest(`/read-later/${id}`, { method: 'DELETE' });
-      loadReadLater();
-    };
-
-    window.deleteSnapshot = async function(id) {
-      if (!confirm('Delete this snapshot?')) return;
-      await apiRequest(`/snapshots/${id}`, { method: 'DELETE' });
-      loadSnapshots();
-    };
-
-    // 初始化
     function init() {
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      document.title = t('appTitle');
+
       if (!token) {
         document.getElementById('app').innerHTML = renderLogin();
-      } else {
-        document.getElementById('app').innerHTML = renderDashboard();
-        loadStats();
-        loadReadLater();
+        return;
       }
+
+      document.getElementById('app').innerHTML = renderDashboard();
+      loadStats();
+      loadReadLater();
     }
 
+    handleSubmit();
+    handleActions();
     init();
   </script>
 </body>
