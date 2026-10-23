@@ -151,6 +151,12 @@ export async function deleteFavorite(db: D1Database, userId: string, id: string)
   if (row?.key) await addTombstone(db, userId, 'favorite', row.key as string);
 }
 
+// 同步推送里带过来的本地删除：按 key 删并留墓碑，否则其它设备拉取时会把收藏加回来
+export async function deleteFavoriteByKey(db: D1Database, userId: string, key: string) {
+  await db.prepare('DELETE FROM favorites WHERE user_id = ? AND key = ?').bind(userId, key).run();
+  await addTombstone(db, userId, 'favorite', key);
+}
+
 // ---------- All Records ----------
 
 export async function syncAllRecords(db: D1Database, userId: string, records: Record<string, any>) {

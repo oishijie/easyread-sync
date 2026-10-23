@@ -1,7 +1,7 @@
 // Sync Routes (全量 / 增量同步)
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { upsertReadLater, upsertNote, upsertFavorite, syncAllRecords, getTombstones } from '../lib/db';
+import { upsertReadLater, upsertNote, upsertFavorite, deleteFavoriteByKey, syncAllRecords, getTombstones } from '../lib/db';
 import { errorResponse, jsonResponse } from '../lib/cors';
 
 const sync = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
@@ -19,7 +19,7 @@ function positionOf(row: any) {
 sync.post('/full', async (c) => {
   try {
     const userId = c.get('userId');
-    const { readLaters, allRecords, notes, favorites } = await c.req.json();
+    const { readLaters, allRecords, notes, favorites, favoriteDeletions } = await c.req.json();
 
     const now = Date.now();
     let syncedCount = 0;
@@ -44,6 +44,14 @@ sync.post('/full', async (c) => {
           await upsertNote(c.env.DB, userId, url, (page as any).title, note);
           syncedCount++;
         }
+      }
+    }
+
+    // 先落删除再写收藏：同一条链接「删了又收」时，后者才是最终意图（写入会清掉刚写的墓碑）
+    if (Array.isArray(favoriteDeletions)) {
+      for (const key of favoriteDeletions) {
+        if (typeof key !== 'string' || !key) continue;
+        await deleteFavoriteByKey(c.env.DB, userId, key);
       }
     }
 
