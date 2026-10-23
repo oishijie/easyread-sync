@@ -33,8 +33,17 @@ export interface ReadLater {
   synced_at: number;
 }
 
-export interface AllRecord {
+export interface Favorite {
   id: string;
+  user_id: string;
+  key: string;
+  url: string;
+  title: string;
+  create_datetime: number;
+  synced_at: number;
+}
+
+export interface AllRecord {  id: string;
   user_id: string;
   url: string;
   title: string;

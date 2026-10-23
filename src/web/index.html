@@ -35,6 +35,7 @@
       --purple: #a78bfa;
       --teal: #34d399;
       --amber: #f5a524;
+      --rose: #f472b6;
       --danger: #ef5350;
       --topbar-bg: rgba(10, 12, 16, .82);
       --nav-active-text: #cfdcff;
@@ -292,10 +293,12 @@
     .chip-purple { color: #cbb8ff; border-color: rgba(167,139,250,.28); background: rgba(167,139,250,.1); }
     .chip-teal { color: #9df0cd; border-color: rgba(52,211,153,.26); background: rgba(52,211,153,.1); }
     .chip-amber { color: #f6cd8b; border-color: rgba(245,165,36,.28); background: rgba(245,165,36,.1); }
+    .chip-rose { color: #ffb3d9; border-color: rgba(244,114,182,.28); background: rgba(244,114,182,.1); }
     [data-theme="light"] .chip-blue { color: #2f5fd0; border-color: rgba(91,140,255,.38); }
     [data-theme="light"] .chip-purple { color: #6b4bd6; border-color: rgba(167,139,250,.42); }
     [data-theme="light"] .chip-teal { color: #0d7a58; border-color: rgba(52,211,153,.4); }
     [data-theme="light"] .chip-amber { color: #9a6405; border-color: rgba(245,165,36,.42); }
+    [data-theme="light"] .chip-rose { color: #c2187e; border-color: rgba(244,114,182,.42); }
     .card-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
 
     .grid.list-mode { columns: auto; display: flex; flex-direction: column; gap: 8px; }
@@ -451,6 +454,7 @@
         logout: 'Sign out',
         navLibrary: 'Library',
         tabReadLater: 'Read Later',
+        tabFavorites: 'Favorites',
         tabNotes: 'Notes',
         tabRecords: 'History',
         tabSnapshots: 'Snapshots',
@@ -469,6 +473,8 @@
         loading: 'Loading…',
         emptyReadLater: 'No read later items',
         emptyReadLaterHint: 'Items you save from the EasyRead popup appear here.',
+        emptyFavorites: 'No saved links yet',
+        emptyFavoritesHint: 'Links you collect from the EasyRead popup appear here.',
         emptyNotes: 'No notes yet',
         emptyNotesHint: 'Pages where you highlighted or wrote something appear here.',
         emptyRecords: 'No history yet',
@@ -507,6 +513,7 @@
         logout: '退出登录',
         navLibrary: '资料库',
         tabReadLater: '稍后阅读',
+        tabFavorites: '收藏',
         tabNotes: '笔记',
         tabRecords: '浏览记录',
         tabSnapshots: '页面快照',
@@ -525,6 +532,8 @@
         loading: '加载中…',
         emptyReadLater: '还没有稍后阅读',
         emptyReadLaterHint: '在扩展弹窗里点「稍后阅读」保存的页面会出现在这里。',
+        emptyFavorites: '还没有收藏的链接',
+        emptyFavoritesHint: '在扩展弹窗里点「收藏」保存的链接会出现在这里。',
         emptyNotes: '还没有笔记',
         emptyNotesHint: '划过重点或写过想法的页面会出现在这里。',
         emptyRecords: '还没有浏览记录',
@@ -556,6 +565,7 @@
 
     const SECTIONS = {
       readLater: { title: 'tabReadLater', color: 'var(--blue)', chip: 'chip-blue' },
+      favorites: { title: 'tabFavorites', color: 'var(--rose)', chip: 'chip-rose' },
       notes: { title: 'tabNotes', color: 'var(--purple)', chip: 'chip-purple' },
       records: { title: 'tabRecords', color: 'var(--teal)', chip: 'chip-teal' },
       snapshots: { title: 'tabSnapshots', color: 'var(--amber)', chip: 'chip-amber' }
@@ -563,6 +573,7 @@
 
     const ICONS = {
       readLater: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v16l-6-4-6 4z"/></svg>',
+      favorites: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>',
       notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>',
       records: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
       snapshots: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/></svg>',
@@ -958,17 +969,19 @@
       `).join('');
     }
 
-    const state = { readLater: 0, notes: 0, records: 0, snapshots: 0 };
+    const state = { readLater: 0, favorites: 0, notes: 0, records: 0, snapshots: 0 };
 
     async function loadOverview() {
       try {
-        const [readLater, notes, records, snapshots] = await Promise.all([
+        const [readLater, favorites, notes, records, snapshots] = await Promise.all([
           apiRequest('/read-later?limit=1'),
+          apiRequest('/favorites?limit=1'),
           apiRequest('/notes?limit=1'),
           apiRequest('/records?limit=1'),
           apiRequest('/snapshots?limit=1')
         ]);
         state.readLater = readLater?.total || 0;
+        state.favorites = favorites?.total || 0;
         state.notes = notes?.total || 0;
         state.records = records?.total || 0;
         state.snapshots = snapshots?.total || 0;
@@ -985,6 +998,7 @@
 
     const EMPTY_STATES = {
       readLater: ['emptyReadLater', 'emptyReadLaterHint'],
+      favorites: ['emptyFavorites', 'emptyFavoritesHint'],
       notes: ['emptyNotes', 'emptyNotesHint'],
       records: ['emptyRecords', 'emptyRecordsHint'],
       snapshots: ['emptySnapshots', 'emptySnapshotsHint']
@@ -1007,6 +1021,21 @@
             chip(statusLabel[item.status] || statusLabel[0], statusChip[item.status] || 'chip-blue')
           ],
           actions: `<button class="btn btn-danger btn-icon" data-delete-readlater="${esc(item.id)}" title="${esc(t('delete'))}">${ICONS.trash}</button>`
+        }));
+      },
+
+      favorites: {
+        const data = await apiRequest('/favorites?limit=60');
+        const items = data?.items || [];
+        const total = data?.total ?? items.length;
+        setCount('favorites', total);
+        setSubtitle(itemsLabel(total));
+        return items.map(item => ({
+          title: item.title,
+          url: item.url,
+          tag: domainOf(item.url),
+          meta: [chip(t('tabFavorites'), 'chip-rose')],
+          actions: `<button class="btn btn-danger btn-icon" data-delete-favorite="${esc(item.id)}" title="${esc(t('delete'))}">${ICONS.trash}</button>`
         }));
       },
 
@@ -1104,6 +1133,15 @@
           await apiRequest(`/read-later/${readLaterId}`, { method: 'DELETE' });
           loadOverview();
           loadSection('readLater');
+          return;
+        }
+
+        const favoriteId = event.target.closest('[data-delete-favorite]')?.dataset.deleteFavorite;
+        if (favoriteId) {
+          if (!confirm(t('confirmItem'))) return;
+          await apiRequest(`/favorites/${favoriteId}`, { method: 'DELETE' });
+          loadOverview();
+          loadSection('favorites');
           return;
         }
 

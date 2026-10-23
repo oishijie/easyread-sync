@@ -1,5 +1,5 @@
 // 数据库工具函数
-import type { ReadLater, Note } from '../types';
+import type { ReadLater, Note, Favorite } from '../types';
 
 export function generateId(): string {
   return crypto.randomUUID();
@@ -98,6 +98,57 @@ export async function deleteReadLater(db: D1Database, userId: string, id: string
     .bind(id, userId).first();
   await db.prepare('DELETE FROM read_laters WHERE id = ? AND user_id = ?').bind(id, userId).run();
   if (row?.key) await addTombstone(db, userId, 'read_later', row.key as string);
+}
+
+// ---------- Favorites ----------
+
+export async function getFavorites(db: D1Database, userId: string, limit = 50, offset = 0) {
+  const result = await db.prepare(
+    'SELECT * FROM favorites WHERE user_id = ? ORDER BY create_datetime DESC LIMIT ? OFFSET ?'
+  ).bind(userId, limit, offset).all();
+
+  const countResult = await db.prepare('SELECT COUNT(*) as total FROM favorites WHERE user_id = ?')
+    .bind(userId).first();
+
+  return {
+    items: (result.results || []).map(parseFavorite),
+    total: (countResult?.total as number) || 0
+  };
+}
+
+// 按 (user_id, key) 幂等写入，key 是规范化后的页面 URL
+export async function upsertFavorite(
+  db: D1Database,
+  userId: string,
+  data: Partial<Favorite> & { key: string; url: string; title?: string; createDateTime?: number }
+) {
+  const now = Date.now();
+  const key = data.key || normalizePageUrl(data.url);
+
+  await db.prepare(`
+    INSERT INTO favorites (id, user_id, key, url, title, create_datetime, synced_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, key) DO UPDATE SET
+      url = excluded.url,
+      title = excluded.title,
+      synced_at = excluded.synced_at
+  `).bind(
+    generateId(), userId, key, data.url, data.title || data.url,
+    data.create_datetime ?? data.createDateTime ?? now, now
+  ).run();
+
+  await clearTombstone(db, userId, 'favorite', key);
+
+  const row = await db.prepare('SELECT id FROM favorites WHERE user_id = ? AND key = ?')
+    .bind(userId, key).first();
+  return row?.id as string;
+}
+
+export async function deleteFavorite(db: D1Database, userId: string, id: string) {
+  const row = await db.prepare('SELECT key FROM favorites WHERE id = ? AND user_id = ?')
+    .bind(id, userId).first();
+  await db.prepare('DELETE FROM favorites WHERE id = ? AND user_id = ?').bind(id, userId).run();
+  if (row?.key) await addTombstone(db, userId, 'favorite', row.key as string);
 }
 
 // ---------- All Records ----------
@@ -267,11 +318,13 @@ export async function getTombstones(db: D1Database, userId: string, since: numbe
 
   const readLaters: string[] = [];
   const notes: string[] = [];
+  const favorites: string[] = [];
   for (const row of result.results || []) {
     if (row.entity === 'read_later') readLaters.push(row.entity_key as string);
     else if (row.entity === 'note') notes.push(row.entity_key as string);
+    else if (row.entity === 'favorite') favorites.push(row.entity_key as string);
   }
-  return { readLaters, notes };
+  return { readLaters, notes, favorites };
 }
 
 // ---------- Helpers ----------
@@ -292,6 +345,18 @@ function parseReadLater(row: any): ReadLater {
       scrollX: row.position_scroll_x,
       scrollY: row.position_scroll_y
     },
+    synced_at: row.synced_at
+  };
+}
+
+function parseFavorite(row: any): Favorite {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    key: row.key,
+    url: row.url,
+    title: row.title,
+    create_datetime: row.create_datetime,
     synced_at: row.synced_at
   };
 }

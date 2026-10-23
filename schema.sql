@@ -106,6 +106,21 @@ CREATE TABLE IF NOT EXISTS snapshots (
 CREATE INDEX IF NOT EXISTS idx_snapshots_user ON snapshots(user_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_url ON snapshots(user_id, url);
 
+-- 收藏链接（独立于稍后阅读）
+CREATE TABLE IF NOT EXISTS favorites (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    url TEXT NOT NULL,
+    title TEXT NOT NULL,
+    create_datetime INTEGER NOT NULL,
+    synced_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE (user_id, key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
+
 -- 同步元数据（用于增量同步）
 CREATE TABLE IF NOT EXISTS sync_metadata (
     user_id TEXT PRIMARY KEY,
@@ -118,8 +133,8 @@ CREATE TABLE IF NOT EXISTS sync_metadata (
 CREATE TABLE IF NOT EXISTS tombstones (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    entity TEXT NOT NULL,     -- 'read_later' | 'note'
-    entity_key TEXT NOT NULL, -- read_later 的 key，或 note 的 note_id
+    entity TEXT NOT NULL,     -- 'read_later' | 'note' | 'favorite'
+    entity_key TEXT NOT NULL, -- read_later / favorite 的 key，或 note 的 note_id
     deleted_at INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE (user_id, entity, entity_key)

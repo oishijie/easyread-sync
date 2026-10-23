@@ -10,6 +10,7 @@ import auth from './routes/auth';
 import readLater from './routes/read-later';
 import notes from './routes/notes';
 import records from './routes/records';
+import favorites from './routes/favorites';
 import sync from './routes/sync';
 import snapshots from './routes/snapshots';
 
@@ -47,6 +48,7 @@ app.get('/api', (c) => {
       readLater: '/api/read-later',
       notes: '/api/notes',
       records: '/api/records',
+      favorites: '/api/favorites',
       snapshots: '/api/snapshots',
       sync: '/api/sync/full, /api/sync/pull'
     }
@@ -63,6 +65,7 @@ app.use('/api/*', authMiddleware);
 app.route('/api/read-later', readLater);
 app.route('/api/notes', notes);
 app.route('/api/records', records);
+app.route('/api/favorites', favorites);
 app.route('/api/sync', sync);
 app.route('/api/snapshots', snapshots);
 

@@ -1,7 +1,7 @@
 // Sync Routes (全量 / 增量同步)
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { upsertReadLater, upsertNote, syncAllRecords, getTombstones } from '../lib/db';
+import { upsertReadLater, upsertNote, upsertFavorite, syncAllRecords, getTombstones } from '../lib/db';
 import { errorResponse, jsonResponse } from '../lib/cors';
 
 const sync = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
@@ -19,7 +19,7 @@ function positionOf(row: any) {
 sync.post('/full', async (c) => {
   try {
     const userId = c.get('userId');
-    const { readLaters, allRecords, notes } = await c.req.json();
+    const { readLaters, allRecords, notes, favorites } = await c.req.json();
 
     const now = Date.now();
     let syncedCount = 0;
@@ -44,6 +44,14 @@ sync.post('/full', async (c) => {
           await upsertNote(c.env.DB, userId, url, (page as any).title, note);
           syncedCount++;
         }
+      }
+    }
+
+    if (Array.isArray(favorites)) {
+      for (const item of favorites) {
+        if (!item?.key || !item?.url) continue;
+        await upsertFavorite(c.env.DB, userId, item);
+        syncedCount++;
       }
     }
 
@@ -80,6 +88,10 @@ sync.get('/pull', async (c) => {
       JOIN notes_pages np ON n.page_id = np.id
       WHERE n.user_id = ? AND n.synced_at > ?
     `).bind(userId, since).all();
+
+    const favoritesResult = await c.env.DB.prepare(
+      'SELECT * FROM favorites WHERE user_id = ? AND synced_at > ? ORDER BY create_datetime DESC'
+    ).bind(userId, since).all();
 
     const deletedIds = await getTombstones(c.env.DB, userId, since);
 
@@ -139,6 +151,12 @@ sync.get('/pull', async (c) => {
       readLaters,
       allRecords,
       notes,
+      favorites: (favoritesResult.results || []).map(row => ({
+        key: row.key,
+        url: row.url,
+        title: row.title,
+        createDateTime: row.create_datetime
+      })),
       deletedIds,
       syncedAt: Date.now()
     });
