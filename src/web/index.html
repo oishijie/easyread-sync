@@ -69,6 +69,10 @@
     .item-title { font-weight: 500; color: #333; margin-bottom: 5px; overflow-wrap: anywhere; }
     .item-url { font-size: 12px; color: #999; overflow-wrap: anywhere; }
     .item-meta { font-size: 12px; color: #666; margin-top: 4px; }
+    a.item-title, a.item-url { text-decoration: none; }
+    a.item-title { color: #333; }
+    a.item-url { color: #999; }
+    a.item-title:hover, a.item-url:hover { color: #ff6b35; text-decoration: underline; }
     .btn {
       padding: 8px 16px;
       border: none;
@@ -416,12 +420,29 @@
       else if (name === 'snapshots') loadSnapshots();
     }
 
+    // 只放行 http(s)，避免把 javascript: 之类的地址写进 href
+    function safeHref(value) {
+      try {
+        const url = new URL(value);
+        return /^https?:$/.test(url.protocol) ? url.href : null;
+      } catch {
+        return null;
+      }
+    }
+
     function itemRow(title, url, meta, actions) {
+      const href = safeHref(url);
+      const titleHtml = href
+        ? `<a class="item-title" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a>`
+        : `<div class="item-title">${esc(title)}</div>`;
+      const urlHtml = href
+        ? `<a class="item-url" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`
+        : `<div class="item-url">${esc(url)}</div>`;
       return `
         <div class="list-item">
           <div>
-            <div class="item-title">${esc(title)}</div>
-            <div class="item-url">${esc(url)}</div>
+            ${titleHtml}
+            ${urlHtml}
             ${meta ? `<div class="item-meta">${esc(meta)}</div>` : ''}
           </div>
           <div>${actions || ''}</div>
