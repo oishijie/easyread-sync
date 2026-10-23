@@ -4,24 +4,80 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EasyRead Sync</title>
+  <script>
+    // 在样式生效前定好主题，避免浅色用户看到一闪而过的深色底
+    (function () {
+      var stored = localStorage.getItem('easyread_theme');
+      var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+      document.documentElement.dataset.theme =
+        stored === 'light' || stored === 'dark' ? stored : (prefersLight ? 'light' : 'dark');
+    })();
+  </script>
   <style>
     :root {
+      color-scheme: dark;
       --bg: #0a0c10;
       --panel: #11141a;
       --panel-2: #171b22;
       --line: #232830;
       --line-soft: #1b2027;
+      --line-hover: #2f3540;
+      --line-strong: #333a45;
       --text: #e6e9ee;
+      --text-strong: #fff;
+      --title: #dfe3ea;
       --muted: #8b95a1;
       --muted-2: #6a7481;
       --accent: #5b8cff;
+      --accent-hover: #4a7bf0;
       --accent-soft: rgba(91, 140, 255, .14);
       --blue: #5b8cff;
       --purple: #a78bfa;
       --teal: #34d399;
       --amber: #f5a524;
       --danger: #ef5350;
+      --topbar-bg: rgba(10, 12, 16, .82);
+      --nav-active-text: #cfdcff;
+      --nav-active-count: #9db9ff;
+      --control-active: #232a35;
+      --thumb-bg: rgba(0, 0, 0, .45);
+      --thumb-border: rgba(255, 255, 255, .06);
+      --grid-line: rgba(255, 255, 255, .035);
+      --shadow: 0 24px 60px rgba(0, 0, 0, .45);
+      --thumb-l1: 16%;
+      --thumb-l2: 10%;
+      --thumb-l3: 18%;
+      --thumb-letter-l: 78%;
       --radius: 14px;
+    }
+
+    [data-theme="light"] {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #fff;
+      --panel-2: #f1f3f6;
+      --line: #dfe3ea;
+      --line-soft: #e8ebf0;
+      --line-hover: #c2cad6;
+      --line-strong: #c8cfda;
+      --text: #1b2027;
+      --text-strong: #0b0e13;
+      --title: #20262e;
+      --muted: #5a6472;
+      --muted-2: #7b8592;
+      --accent-soft: rgba(91, 140, 255, .12);
+      --topbar-bg: rgba(255, 255, 255, .85);
+      --nav-active-text: #2a55c8;
+      --nav-active-count: #4a76e8;
+      --control-active: #e4e9f2;
+      --thumb-bg: rgba(255, 255, 255, .75);
+      --thumb-border: rgba(0, 0, 0, .08);
+      --grid-line: rgba(0, 0, 0, .05);
+      --shadow: 0 18px 44px rgba(15, 23, 42, .12);
+      --thumb-l1: 90%;
+      --thumb-l2: 96%;
+      --thumb-l3: 92%;
+      --thumb-letter-l: 42%;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; }
@@ -75,13 +131,13 @@
     }
     .nav-item svg { width: 16px; height: 16px; flex: 0 0 16px; }
     .nav-item:hover { background: var(--panel-2); color: var(--text); }
-    .nav-item.active { background: var(--accent-soft); color: #cfdcff; }
+    .nav-item.active { background: var(--accent-soft); color: var(--nav-active-text); }
     .nav-item.active svg { color: var(--accent); }
     .nav-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .nav-count {
       font-size: 11px; color: var(--muted-2); font-variant-numeric: tabular-nums;
     }
-    .nav-item.active .nav-count { color: #9db9ff; }
+    .nav-item.active .nav-count { color: var(--nav-active-count); }
 
     .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
     .user-box {
@@ -113,7 +169,7 @@
       display: flex; align-items: center; justify-content: space-between; gap: 16px;
       padding: 20px 28px 14px;
       border-bottom: 1px solid var(--line-soft);
-      background: rgba(10, 12, 16, .82);
+      background: var(--topbar-bg);
       backdrop-filter: blur(8px);
       position: sticky; top: 0; z-index: 5;
     }
@@ -126,7 +182,7 @@
     }
     .view-btn { display: grid; place-items: center; padding: 5px 7px; border-radius: 6px; color: var(--muted-2); }
     .view-btn:hover { color: var(--text); }
-    .view-btn.active { background: #232a35; color: var(--text); }
+    .view-btn.active { background: var(--control-active); color: var(--text); }
     .view-btn svg { width: 15px; height: 15px; }
 
     .btn {
@@ -137,10 +193,10 @@
       transition: border-color .15s, color .15s, background .15s;
       text-decoration: none;
     }
-    .btn:hover { border-color: #333a45; color: var(--text); }
+    .btn:hover { border-color: var(--line-strong); color: var(--text); }
     .btn svg { width: 14px; height: 14px; }
     .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #4a7bf0; border-color: #4a7bf0; color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
     .btn-danger:hover { border-color: rgba(239, 83, 80, .5); color: var(--danger); }
     .btn-icon { padding: 7px; }
 
@@ -181,44 +237,44 @@
       overflow: hidden;
       transition: border-color .15s, transform .15s;
     }
-    .card:hover { border-color: #2f3540; transform: translateY(-1px); }
+    .card:hover { border-color: var(--line-hover); transform: translateY(-1px); }
     .thumb {
       height: 128px;
       position: relative;
       display: grid; place-items: center;
       background:
         radial-gradient(120% 120% at 20% 0%, hsla(var(--h), 60%, 45%, .28), transparent 60%),
-        linear-gradient(150deg, hsl(var(--h) 22% 16%), hsl(calc(var(--h) + 40) 18% 10%));
+        linear-gradient(150deg, hsl(var(--h) 22% var(--thumb-l1)), hsl(calc(var(--h) + 40) 18% var(--thumb-l2)));
       border-bottom: 1px solid var(--line-soft);
     }
     .thumb::after {
       content: "";
       position: absolute; inset: 0;
-      background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
       background-size: 22px 22px;
       mask-image: radial-gradient(80% 80% at 50% 40%, #000 30%, transparent 100%);
     }
     .thumb-letter {
       font-size: 40px; font-weight: 700; line-height: 1;
-      color: hsla(var(--h), 70%, 78%, .9);
+      color: hsla(var(--h), 70%, var(--thumb-letter-l), .9);
       position: relative; z-index: 1;
     }
     .thumb-tag {
       position: absolute; left: 10px; bottom: 9px; z-index: 1;
       font-size: 10px; letter-spacing: .3px;
       padding: 3px 7px; border-radius: 999px;
-      background: rgba(0, 0, 0, .45); color: var(--muted);
-      border: 1px solid rgba(255,255,255,.06);
+      background: var(--thumb-bg); color: var(--muted);
+      border: 1px solid var(--thumb-border);
       max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .card-body { padding: 12px 14px 13px; }
     .card-title {
-      font-size: 13.5px; line-height: 1.5; color: #dfe3ea;
+      font-size: 13.5px; line-height: 1.5; color: var(--title);
       display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
       text-decoration: none;
     }
-    a.card-title:hover { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+    a.card-title:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 2px; }
     .card-url {
       margin-top: 6px; font-size: 11.5px; color: var(--muted-2);
       overflow-wrap: anywhere;
@@ -236,6 +292,10 @@
     .chip-purple { color: #cbb8ff; border-color: rgba(167,139,250,.28); background: rgba(167,139,250,.1); }
     .chip-teal { color: #9df0cd; border-color: rgba(52,211,153,.26); background: rgba(52,211,153,.1); }
     .chip-amber { color: #f6cd8b; border-color: rgba(245,165,36,.28); background: rgba(245,165,36,.1); }
+    [data-theme="light"] .chip-blue { color: #2f5fd0; border-color: rgba(91,140,255,.38); }
+    [data-theme="light"] .chip-purple { color: #6b4bd6; border-color: rgba(167,139,250,.42); }
+    [data-theme="light"] .chip-teal { color: #0d7a58; border-color: rgba(52,211,153,.4); }
+    [data-theme="light"] .chip-amber { color: #9a6405; border-color: rgba(245,165,36,.42); }
     .card-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
 
     .grid.list-mode { columns: auto; display: flex; flex-direction: column; gap: 8px; }
@@ -247,20 +307,20 @@
       border-radius: 10px;
       transition: border-color .15s;
     }
-    .row:hover { border-color: #2f3540; }
+    .row:hover { border-color: var(--line-hover); }
     .row-thumb {
       flex: 0 0 34px; width: 34px; height: 34px; border-radius: 9px;
       display: grid; place-items: center;
       font-size: 15px; font-weight: 700;
-      background: hsl(var(--h) 26% 18%);
-      color: hsla(var(--h), 70%, 78%, .9);
+      background: hsl(var(--h) 26% var(--thumb-l3));
+      color: hsla(var(--h), 70%, var(--thumb-letter-l), .9);
     }
     .row-main { flex: 1; min-width: 0; }
     .row-title {
-      display: block; font-size: 13.5px; color: #dfe3ea; text-decoration: none;
+      display: block; font-size: 13.5px; color: var(--title); text-decoration: none;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    a.row-title:hover { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+    a.row-title:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 2px; }
     .row-url {
       display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted-2); text-decoration: none;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -303,9 +363,9 @@
       border: 1px solid var(--line-soft);
       border-radius: 18px;
       padding: 30px 28px 26px;
-      box-shadow: 0 24px 60px rgba(0,0,0,.45);
+      box-shadow: var(--shadow);
     }
-    .login-top { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+    .login-top { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 14px; }
     .login-top .langSelect { width: auto; }
     .login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
     .login-brand .brand-mark { width: 32px; height: 32px; border-radius: 10px; font-size: 16px; }
@@ -328,12 +388,12 @@
       background: var(--accent); color: #fff; font-size: 13.5px; font-weight: 500;
       transition: background .15s;
     }
-    .login-btn:hover { background: #4a7bf0; }
+    .login-btn:hover { background: var(--accent-hover); }
     .login-btn.secondary {
       background: transparent; color: var(--muted);
       border: 1px solid var(--line); margin-top: 9px;
     }
-    .login-btn.secondary:hover { color: var(--text); border-color: #333a45; }
+    .login-btn.secondary:hover { color: var(--text); border-color: var(--line-strong); }
     .error { color: var(--danger); font-size: 12.5px; margin-top: 12px; min-height: 16px; line-height: 1.5; }
 
     @media (max-width: 900px) {
@@ -375,6 +435,7 @@
     let lang = localStorage.getItem('easyread_lang')
       || ((navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en');
     let view = localStorage.getItem('easyread_view') === 'list' ? 'list' : 'cards';
+    let theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
 
     const I18N = {
       en: {
@@ -403,6 +464,8 @@
         viewLabel: 'Layout',
         viewCards: 'Card view',
         viewList: 'List view',
+        themeLight: 'Light mode',
+        themeDark: 'Dark mode',
         loading: 'Loading…',
         emptyReadLater: 'No read later items',
         emptyReadLaterHint: 'Items you save from the EasyRead popup appear here.',
@@ -457,6 +520,8 @@
         viewLabel: '布局',
         viewCards: '卡片视图',
         viewList: '列表视图',
+        themeLight: '浅色模式',
+        themeDark: '深色模式',
         loading: '加载中…',
         emptyReadLater: '还没有稍后阅读',
         emptyReadLaterHint: '在扩展弹窗里点「稍后阅读」保存的页面会出现在这里。',
@@ -504,6 +569,8 @@
       refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 5v6h-6"/></svg>',
       grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
       list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+      sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+      moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>',
       external: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-8 8"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
       download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M5 20h14"/></svg>',
       trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/></svg>',
@@ -522,6 +589,23 @@
         <option value="en"${lang === 'en' ? ' selected' : ''}>English</option>
         <option value="zh"${lang === 'zh' ? ' selected' : ''}>简体中文</option>
       </select>`;
+    }
+
+    function themeButton() {
+      const label = theme === 'light' ? t('themeDark') : t('themeLight');
+      return `<button class="btn btn-icon" data-theme-toggle title="${esc(label)}" aria-label="${esc(label)}">${theme === 'light' ? ICONS.moon : ICONS.sun}</button>`;
+    }
+
+    function applyTheme(next) {
+      theme = next === 'light' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem('easyread_theme', theme);
+      const label = theme === 'light' ? t('themeDark') : t('themeLight');
+      document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
+        btn.innerHTML = theme === 'light' ? ICONS.moon : ICONS.sun;
+        btn.title = label;
+        btn.setAttribute('aria-label', label);
+      });
     }
 
     // 只放行 http(s)，避免把 javascript: 之类的地址写进 href
@@ -610,7 +694,7 @@
       return `
         <div class="login-wrap">
           <div class="login-card">
-            <div class="login-top">${langSelect()}</div>
+            <div class="login-top">${themeButton()}${langSelect()}</div>
             <div class="login-brand">
               <span class="brand-mark">E</span>
               <h2>${esc(t('loginTitle'))}</h2>
@@ -671,6 +755,7 @@
                 <div class="sub" id="pageSub"></div>
               </div>
               <div class="topbar-actions">
+                ${themeButton()}
                 <div class="view-toggle" role="group" aria-label="${esc(t('viewLabel'))}">
                   <button class="view-btn${view === 'cards' ? ' active' : ''}" data-view="cards" title="${esc(t('viewCards'))}" aria-label="${esc(t('viewCards'))}">${ICONS.grid}</button>
                   <button class="view-btn${view === 'list' ? ' active' : ''}" data-view="list" title="${esc(t('viewList'))}" aria-label="${esc(t('viewList'))}">${ICONS.list}</button>
@@ -796,6 +881,11 @@
 
         if (event.target.closest('#btnRefresh')) {
           refreshAll();
+          return;
+        }
+
+        if (event.target.closest('[data-theme-toggle]')) {
+          applyTheme(theme === 'light' ? 'dark' : 'light');
           return;
         }
 
