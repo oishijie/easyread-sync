@@ -220,7 +220,60 @@ Response:
 }
 ```
 
-### 5. 页面快照
+### 5. 链接收藏
+
+收藏与稍后阅读相互独立，按规范化页面 URL（`key`）幂等去重：同一个 `key` 重复提交只更新现有行。
+
+#### GET /api/favorites
+获取收藏列表
+```json
+Query: ?limit=50&offset=0   # limit 上限 200
+
+Response:
+{
+  "items": [
+    {
+      "id": "uuid",
+      "user_id": "uuid",
+      "key": "https://example.com/",
+      "url": "https://example.com/article",
+      "title": "Example",
+      "create_datetime": 1679496233321,
+      "synced_at": 1679496233321
+    }
+  ],
+  "total": 1
+}
+```
+
+#### POST /api/favorites
+添加或更新收藏
+```json
+Request:
+{
+  "key": "https://example.com/",
+  "url": "https://example.com/article",
+  "title": "Example",
+  "createDateTime": 1679496233321
+}
+
+Response:
+{
+  "id": "uuid",
+  "created": true
+}
+```
+
+#### DELETE /api/favorites/:id
+删除收藏，同时在 `tombstones` 留下 `entity='favorite'` 的墓碑，其它设备拉取时不会把已删条目加回来。
+```json
+Response:
+{
+  "deleted": true
+}
+```
+
+### 6. 页面快照
 
 #### POST /api/snapshots/upload
 上传页面快照到 R2
@@ -261,7 +314,19 @@ Response:
 }
 ```
 
-### 6. 同步
+#### GET /api/snapshots/:id/download
+按 id 下载快照文件，返回文件字节流（`Content-Disposition` 带原始文件名，`Content-Type` 取记录的 mime）。
+
+#### DELETE /api/snapshots/:id
+删除快照记录并同步删除 R2 对象（未配 R2 时只删元数据）。
+```json
+Response:
+{
+  "deleted": true
+}
+```
+
+### 7. 同步
 
 #### POST /api/sync/full
 全量同步（上传本地所有数据）
@@ -270,15 +335,20 @@ Request:
 {
   "readLaters": [...],
   "allRecords": {...},
-  "notes": {...}
+  "notes": {...},
+  "favorites": [...],
+  "favoriteDeletions": ["https://example.com/"]
 }
 
 Response:
 {
   "synced": true,
-  "syncedAt": 1679496233321
+  "syncedAt": 1679496233321,
+  "syncedCount": 12
 }
 ```
+
+`favoriteDeletions` 是本地删除的收藏 `key` 队列：服务端先按 key 删行并落墓碑，再写入 `favorites`，因此同一次推送中「删了又收」以写入为准。
 
 #### GET /api/sync/pull
 拉取云端数据
@@ -290,9 +360,11 @@ Response:
   "readLaters": [...],
   "allRecords": {...},
   "notes": {...},
+  "favorites": [...],
   "deletedIds": {
     "readLaters": ["id1", "id2"],
-    "notes": ["id3"]
+    "notes": ["id3"],
+    "favorites": ["https://example.com/"]
   },
   "syncedAt": 1679496233321
 }

@@ -85,8 +85,9 @@ npm run deploy
 
 ## API 文档
 
-详见 [api-design.md](./api-design.md)。该文件较早，尚未收录「收藏」与「删除墓碑」相关内容，端点以代码与本表为准。
+详见 [api-design.md](./api-design.md)。
 
+端点速查：
 | 分组 | 端点 |
 |---|---|
 | 认证 | `POST /api/auth/register`、`POST /api/auth/login` |
