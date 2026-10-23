@@ -155,10 +155,10 @@ curl -X POST https://your-worker.workers.dev/api/auth/login \
 ## 🎯 下一步优化方向
 
 ### 高优先级
-- [ ] 实现真正的 Web Dashboard（完整 UI）
+- [x] 实现真正的 Web Dashboard（完整 UI）
 - [ ] 增量同步优化（避免重复传输）
 - [ ] 数据冲突解决策略
-- [ ] 修改 EasyRead 扩展添加同步功能
+- [x] 修改 EasyRead 扩展添加同步功能
 
 ### 中优先级
 - [ ] 多设备在线状态显示
@@ -169,7 +169,7 @@ curl -X POST https://your-worker.workers.dev/api/auth/login \
 - [ ] 移动端 PWA 应用
 - [ ] 浏览器扩展市场上架
 - [ ] 数据加密存储
-- [ ] 多语言支持
+- [x] 多语言支持（中 / 英）
 
 ## 📝 文档列表
 

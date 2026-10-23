@@ -5,141 +5,322 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EasyRead Sync</title>
   <style>
+    :root {
+      --bg: #0a0c10;
+      --panel: #11141a;
+      --panel-2: #171b22;
+      --line: #232830;
+      --line-soft: #1b2027;
+      --text: #e6e9ee;
+      --muted: #8b95a1;
+      --muted-2: #6a7481;
+      --accent: #5b8cff;
+      --accent-soft: rgba(91, 140, 255, .14);
+      --blue: #5b8cff;
+      --purple: #a78bfa;
+      --teal: #34d399;
+      --amber: #f5a524;
+      --danger: #ef5350;
+      --radius: 14px;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
     }
-    .container { max-width: 1200px; margin: 0 auto; }
-    .header {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    a { color: inherit; }
+    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+    select { font: inherit; }
+
+    /* ---------- shell ---------- */
+    .shell { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 216px;
+      flex: 0 0 216px;
+      background: var(--panel);
+      border-right: 1px solid var(--line-soft);
+      padding: 22px 14px 16px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
     }
-    .header h1 { color: #333; font-size: 20px; }
-    .header .user-info { color: #666; font-size: 14px; display: flex; gap: 12px; align-items: center; }
-    .header a { color: #ff6b35; text-decoration: none; }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 4px; }
+    .brand-mark {
+      width: 28px; height: 28px; border-radius: 9px;
+      background: linear-gradient(140deg, #5b8cff, #8b5cf6);
+      display: grid; place-items: center;
+      font-size: 15px; font-weight: 700; color: #fff;
+    }
+    .brand-name { font-size: 15px; font-weight: 600; letter-spacing: .2px; }
+    .brand-sub { display: block; font-size: 10.5px; color: var(--muted-2); font-weight: 400; margin-top: 1px; }
+
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav-label {
+      font-size: 10.5px; text-transform: uppercase; letter-spacing: .9px;
+      color: var(--muted-2); padding: 6px 10px 4px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; border-radius: 9px;
+      color: var(--muted); text-align: left; width: 100%;
+      transition: background .15s, color .15s;
+    }
+    .nav-item svg { width: 16px; height: 16px; flex: 0 0 16px; }
+    .nav-item:hover { background: var(--panel-2); color: var(--text); }
+    .nav-item.active { background: var(--accent-soft); color: #cfdcff; }
+    .nav-item.active svg { color: var(--accent); }
+    .nav-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-count {
+      font-size: 11px; color: var(--muted-2); font-variant-numeric: tabular-nums;
+    }
+    .nav-item.active .nav-count { color: #9db9ff; }
+
+    .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+    .user-box {
+      border-top: 1px solid var(--line-soft);
+      padding: 12px 10px 0;
+      font-size: 11.5px; color: var(--muted-2);
+      overflow-wrap: anywhere;
+    }
+    .user-box b { display: block; color: var(--muted); font-weight: 500; margin-bottom: 2px; }
+    .logout { color: var(--muted); font-size: 12px; }
+    .logout:hover { color: var(--danger); }
+
     .langSelect {
-      padding: 6px 10px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      background: #fff;
-      font-size: 13px;
-      color: #333;
-    }
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .tab {
-      padding: 10px 20px;
-      background: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    .tab:hover { background: #f0f0f0; }
-    .tab.active { background: #ff6b35; color: white; }
-    .content {
-      background: white;
-      padding: 20px;
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      min-height: 400px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+      outline: none;
     }
-    .section { display: none; }
-    .section.active { display: block; }
-    .list-item {
-      padding: 15px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+    .langSelect:focus { border-color: var(--accent); }
+
+    /* ---------- main ---------- */
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 20px 28px 14px;
+      border-bottom: 1px solid var(--line-soft);
+      background: rgba(10, 12, 16, .82);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 5;
     }
-    .list-item:last-child { border-bottom: none; }
-    .list-item:hover { background: #f9f9f9; }
-    .item-title { font-weight: 500; color: #333; margin-bottom: 5px; overflow-wrap: anywhere; }
-    .item-url { font-size: 12px; color: #999; overflow-wrap: anywhere; }
-    .item-meta { font-size: 12px; color: #666; margin-top: 4px; }
-    a.item-title, a.item-url { text-decoration: none; }
-    a.item-title { color: #333; }
-    a.item-url { color: #999; }
-    a.item-title:hover, a.item-url:hover { color: #ff6b35; text-decoration: underline; }
+    .topbar h1 { font-size: 18px; font-weight: 600; letter-spacing: .2px; }
+    .topbar .sub { font-size: 12px; color: var(--muted-2); margin-top: 3px; }
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
     .btn {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-      white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 8px;
+      font-size: 12.5px; white-space: nowrap;
+      border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+      transition: border-color .15s, color .15s, background .15s;
       text-decoration: none;
-      display: inline-block;
     }
-    .btn-primary { background: #ff6b35; color: white; }
-    .btn-primary:hover { background: #e85a24; }
-    .btn-danger { background: #dc3545; color: white; }
-    .btn-danger:hover { background: #c82333; }
-    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
-    .login-form {
-      max-width: 400px;
-      margin: 80px auto;
-      background: white;
-      padding: 40px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    .btn:hover { border-color: #333a45; color: var(--text); }
+    .btn svg { width: 14px; height: 14px; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #4a7bf0; border-color: #4a7bf0; color: #fff; }
+    .btn-danger:hover { border-color: rgba(239, 83, 80, .5); color: var(--danger); }
+    .btn-icon { padding: 7px; }
+
+    /* ---------- overview ---------- */
+    .overview {
+      display: flex; align-items: center; gap: 26px;
+      padding: 22px 28px 6px;
+      flex-wrap: wrap;
     }
-    .login-top { display: flex; justify-content: flex-end; margin-bottom: 12px; }
-    .login-form h2 { margin-bottom: 8px; text-align: center; }
-    .login-form .hint { text-align: center; color: #888; font-size: 13px; margin-bottom: 24px; }
-    .form-group { margin-bottom: 20px; }
-    .form-group label { display: block; margin-bottom: 8px; color: #333; }
+    .donut-wrap { position: relative; width: 118px; height: 118px; flex: 0 0 118px; }
+    .donut { width: 118px; height: 118px; border-radius: 50%; }
+    .donut-hole {
+      position: absolute; inset: 13px; border-radius: 50%;
+      background: var(--bg);
+      display: grid; place-content: center; text-align: center;
+    }
+    .donut-hole b { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .donut-hole span { font-size: 10.5px; color: var(--muted-2); }
+
+    .legend { display: grid; gap: 9px; }
+    .legend-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+    .legend-row b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 4px; }
+    .legend-row .legend-label { min-width: 74px; }
+
+    /* ---------- cards ---------- */
+    .grid {
+      columns: 4 240px;
+      column-gap: 14px;
+      padding: 18px 28px 40px;
+    }
+    .card {
+      break-inside: avoid;
+      margin: 0 0 14px;
+      background: var(--panel);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color .15s, transform .15s;
+    }
+    .card:hover { border-color: #2f3540; transform: translateY(-1px); }
+    .thumb {
+      height: 128px;
+      position: relative;
+      display: grid; place-items: center;
+      background:
+        radial-gradient(120% 120% at 20% 0%, hsla(var(--h), 60%, 45%, .28), transparent 60%),
+        linear-gradient(150deg, hsl(var(--h) 22% 16%), hsl(calc(var(--h) + 40) 18% 10%));
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .thumb::after {
+      content: "";
+      position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 22px 22px;
+      mask-image: radial-gradient(80% 80% at 50% 40%, #000 30%, transparent 100%);
+    }
+    .thumb-letter {
+      font-size: 40px; font-weight: 700; line-height: 1;
+      color: hsla(var(--h), 70%, 78%, .9);
+      position: relative; z-index: 1;
+    }
+    .thumb-tag {
+      position: absolute; left: 10px; bottom: 9px; z-index: 1;
+      font-size: 10px; letter-spacing: .3px;
+      padding: 3px 7px; border-radius: 999px;
+      background: rgba(0, 0, 0, .45); color: var(--muted);
+      border: 1px solid rgba(255,255,255,.06);
+      max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .card-body { padding: 12px 14px 13px; }
+    .card-title {
+      font-size: 13.5px; line-height: 1.5; color: #dfe3ea;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+      text-decoration: none;
+    }
+    a.card-title:hover { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+    .card-url {
+      margin-top: 6px; font-size: 11.5px; color: var(--muted-2);
+      overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+      text-decoration: none;
+    }
+    a.card-url:hover { color: var(--accent); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip {
+      font-size: 10.5px; padding: 3px 8px; border-radius: 999px;
+      background: var(--panel-2); color: var(--muted);
+      border: 1px solid var(--line-soft);
+    }
+    .chip-blue { color: #a9c2ff; border-color: rgba(91,140,255,.28); background: rgba(91,140,255,.1); }
+    .chip-purple { color: #cbb8ff; border-color: rgba(167,139,250,.28); background: rgba(167,139,250,.1); }
+    .chip-teal { color: #9df0cd; border-color: rgba(52,211,153,.26); background: rgba(52,211,153,.1); }
+    .chip-amber { color: #f6cd8b; border-color: rgba(245,165,36,.28); background: rgba(245,165,36,.1); }
+    .card-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+
+    /* ---------- states ---------- */
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center; color: var(--muted-2);
+      padding: 70px 20px; font-size: 13px;
+    }
+    .empty svg { width: 30px; height: 30px; opacity: .5; margin-bottom: 12px; }
+    .empty .empty-title { color: var(--muted); font-size: 13.5px; margin-bottom: 5px; }
+    .skeleton {
+      break-inside: avoid; margin: 0 0 14px;
+      height: 200px; border-radius: var(--radius);
+      background: linear-gradient(100deg, var(--panel) 30%, var(--panel-2) 50%, var(--panel) 70%);
+      background-size: 220% 100%;
+      animation: shimmer 1.2s infinite linear;
+    }
+    @keyframes shimmer { to { background-position: -220% 0; } }
+
+    /* ---------- login ---------- */
+    .login-wrap {
+      min-height: 100vh;
+      display: grid; place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(60% 50% at 50% 0%, rgba(91,140,255,.12), transparent 70%),
+        var(--bg);
+    }
+    .login-card {
+      width: 100%; max-width: 372px;
+      background: var(--panel);
+      border: 1px solid var(--line-soft);
+      border-radius: 18px;
+      padding: 30px 28px 26px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    }
+    .login-top { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+    .login-top .langSelect { width: auto; }
+    .login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .login-brand .brand-mark { width: 32px; height: 32px; border-radius: 10px; font-size: 16px; }
+    .login-card h2 { font-size: 17px; font-weight: 600; }
+    .login-hint { color: var(--muted-2); font-size: 12.5px; margin: 8px 0 22px; line-height: 1.55; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; }
     .form-group input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
+      width: 100%; padding: 10px 12px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: var(--text); font-size: 13.5px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
     }
-    .form-group input:focus { outline: none; border-color: #ff6b35; }
+    .form-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     .login-btn {
-      width: 100%;
-      padding: 12px;
-      background: #ff6b35;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      cursor: pointer;
+      width: 100%; padding: 11px; border-radius: 9px;
+      background: var(--accent); color: #fff; font-size: 13.5px; font-weight: 500;
+      transition: background .15s;
     }
-    .login-btn:hover { background: #e85a24; }
-    .login-btn.secondary { background: #6c757d; margin-top: 10px; }
-    .login-btn.secondary:hover { background: #5a6268; }
-    .error { color: #dc3545; font-size: 14px; margin-top: 10px; min-height: 18px; }
-    .loading { text-align: center; padding: 40px; color: #999; }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
+    .login-btn:hover { background: #4a7bf0; }
+    .login-btn.secondary {
+      background: transparent; color: var(--muted);
+      border: 1px solid var(--line); margin-top: 9px;
     }
-    .stat-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
+    .login-btn.secondary:hover { color: var(--text); border-color: #333a45; }
+    .error { color: var(--danger); font-size: 12.5px; margin-top: 12px; min-height: 16px; line-height: 1.5; }
+
+    @media (max-width: 900px) {
+      .shell { flex-direction: column; }
+      .sidebar {
+        width: auto; flex: none; height: auto; position: static;
+        padding: 14px 16px;
+        border-right: none; border-bottom: 1px solid var(--line-soft);
+        gap: 12px;
+      }
+      .nav { flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 2px; }
+      .nav-label { display: none; }
+      .nav-item { width: auto; white-space: nowrap; padding: 8px 12px; }
+      .nav-count { margin-left: 2px; }
+      .sidebar-foot { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; margin-top: 0; }
+      .user-box { border-top: none; padding: 0; }
+      .user-box b { display: none; }
+      .langSelect { width: auto; }
+      .topbar { padding: 14px 16px 12px; }
+      .overview { padding: 18px 16px 4px; gap: 18px; }
+      .grid { columns: 2 160px; padding: 14px 16px 32px; }
     }
-    .stat-card h3 { font-size: 32px; margin-bottom: 5px; }
-    .stat-card p { font-size: 14px; opacity: 0.9; }
+    @media (max-width: 560px) {
+      .grid { columns: 1; }
+      .thumb { height: 150px; }
+      .donut-wrap, .donut { width: 96px; height: 96px; flex-basis: 96px; }
+      .donut-hole b { font-size: 20px; }
+    }
   </style>
 </head>
 <body>
@@ -155,26 +336,35 @@
     const I18N = {
       en: {
         appTitle: 'EasyRead Sync',
+        brandSub: 'Cloud Sync',
         loginTitle: 'EasyRead Sync',
-        loginHint: 'Create an account first, then sign in.',
+        loginHint: 'Create an account first, then sign in. Everything stays on your own server.',
         email: 'Email',
         password: 'Password (at least 8 characters)',
         login: 'Sign in',
         register: 'Create account',
         userId: 'User ID',
         logout: 'Sign out',
+        navLibrary: 'Library',
         tabReadLater: 'Read Later',
         tabNotes: 'Notes',
         tabRecords: 'History',
         tabSnapshots: 'Snapshots',
-        statReadLater: 'Read Later Items',
-        statNotes: 'Note Pages',
-        statRecords: 'Visited Pages',
+        statTotal: 'Saved',
+        statReadLater: 'Read Later',
+        statNotes: 'Note pages',
+        statRecords: 'Visited pages',
+        refresh: 'Refresh',
+        items: 'items',
         loading: 'Loading…',
         emptyReadLater: 'No read later items',
+        emptyReadLaterHint: 'Items you save from the EasyRead popup appear here.',
         emptyNotes: 'No notes yet',
+        emptyNotesHint: 'Pages where you highlighted or wrote something appear here.',
         emptyRecords: 'No history yet',
+        emptyRecordsHint: 'Enable auto record in the extension to collect visited pages.',
         emptySnapshots: 'No snapshots yet',
+        emptySnapshotsHint: 'Page snapshots saved from the extension appear here.',
         loadFailed: 'Failed to load',
         statusUnread: 'Unread',
         statusReading: 'Reading',
@@ -183,6 +373,7 @@
         notesCount: 'notes',
         format: 'Format',
         size: 'Size',
+        open: 'Open',
         download: 'Download',
         delete: 'Delete',
         confirmItem: 'Delete this item?',
@@ -195,26 +386,35 @@
       },
       zh: {
         appTitle: 'EasyRead Sync 云端同步',
+        brandSub: '云端同步',
         loginTitle: 'EasyRead Sync',
-        loginHint: '首次使用请先「注册」，已有账号直接「登录」。',
+        loginHint: '首次使用请先「注册」，已有账号直接「登录」。数据只存在你自己的服务器上。',
         email: '邮箱',
         password: '密码（至少 8 位）',
         login: '登录',
         register: '注册',
         userId: '用户 ID',
         logout: '退出登录',
+        navLibrary: '资料库',
         tabReadLater: '稍后阅读',
         tabNotes: '笔记',
         tabRecords: '浏览记录',
         tabSnapshots: '页面快照',
+        statTotal: '已保存',
         statReadLater: '稍后阅读',
         statNotes: '笔记页面',
         statRecords: '访问页面',
+        refresh: '刷新',
+        items: '项',
         loading: '加载中…',
         emptyReadLater: '还没有稍后阅读',
+        emptyReadLaterHint: '在扩展弹窗里点「稍后阅读」保存的页面会出现在这里。',
         emptyNotes: '还没有笔记',
+        emptyNotesHint: '划过重点或写过想法的页面会出现在这里。',
         emptyRecords: '还没有浏览记录',
+        emptyRecordsHint: '在扩展里开启「自动记录」后，访问过的页面会汇总到这里。',
         emptySnapshots: '还没有页面快照',
+        emptySnapshotsHint: '在扩展里保存的网页快照会出现在这里。',
         loadFailed: '加载失败',
         statusUnread: '未读',
         statusReading: '阅读中',
@@ -223,6 +423,7 @@
         notesCount: '条笔记',
         format: '格式',
         size: '大小',
+        open: '打开',
         download: '下载',
         delete: '删除',
         confirmItem: '确定删除这一项？',
@@ -236,6 +437,25 @@
     };
 
     const t = key => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+
+    const SECTIONS = {
+      readLater: { title: 'tabReadLater', color: 'var(--blue)', chip: 'chip-blue' },
+      notes: { title: 'tabNotes', color: 'var(--purple)', chip: 'chip-purple' },
+      records: { title: 'tabRecords', color: 'var(--teal)', chip: 'chip-teal' },
+      snapshots: { title: 'tabSnapshots', color: 'var(--amber)', chip: 'chip-amber' }
+    };
+
+    const ICONS = {
+      readLater: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v16l-6-4-6 4z"/></svg>',
+      notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>',
+      records: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+      snapshots: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/></svg>',
+      refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 5v6h-6"/></svg>',
+      external: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-8 8"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+      download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 11.5L12 16l4.5-4.5"/><path d="M5 20h14"/></svg>',
+      trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/></svg>',
+      inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l2.5-7h11L20 13"/><path d="M4 13v6h16v-6"/><path d="M8 13h8"/></svg>'
+    };
 
     // 页面标题与 URL 来自任意网页，插入 DOM 前必须转义
     function esc(value) {
@@ -251,56 +471,146 @@
       </select>`;
     }
 
+    // 只放行 http(s)，避免把 javascript: 之类的地址写进 href
+    function safeHref(value) {
+      try {
+        const url = new URL(value);
+        return /^https?:$/.test(url.protocol) ? url.href : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function domainOf(value) {
+      const href = safeHref(value);
+      if (!href) return '';
+      return new URL(href).hostname.replace(/^www\./, '');
+    }
+
+    // 同一个站点总是得到同一个色相，卡片缩略图靠它区分
+    function hueOf(text) {
+      let hash = 0;
+      for (const char of String(text || '')) hash = (hash * 31 + char.codePointAt(0)) % 360;
+      return hash;
+    }
+
+    function chip(text, kind) {
+      return `<span class="chip${kind ? ' ' + kind : ''}">${esc(text)}</span>`;
+    }
+
+    function card({ title, url, tag, meta, actions }) {
+      const href = safeHref(url);
+      const domain = domainOf(url);
+      const hue = hueOf(domain || title || '');
+      const letter = esc((domain || title || '?').trim().charAt(0).toUpperCase() || '?');
+      const titleHtml = href
+        ? `<a class="card-title" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(title || domain)}</a>`
+        : `<div class="card-title">${esc(title || domain || '—')}</div>`;
+      const urlHtml = href
+        ? `<a class="card-url" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`
+        : `<div class="card-url">${esc(url || '')}</div>`;
+      return `
+        <article class="card">
+          <div class="thumb" style="--h:${hue}">
+            <span class="thumb-letter">${letter}</span>
+            ${tag ? `<span class="thumb-tag">${esc(tag)}</span>` : ''}
+          </div>
+          <div class="card-body">
+            ${titleHtml}
+            ${urlHtml}
+            ${meta && meta.length ? `<div class="chips">${meta.join('')}</div>` : ''}
+            ${actions ? `<div class="card-actions">${actions}</div>` : ''}
+          </div>
+        </article>
+      `;
+    }
+
+    function emptyState(key, hintKey) {
+      return `<div class="empty">${ICONS.inbox}
+        <div class="empty-title">${esc(t(key))}</div>
+        <div>${esc(t(hintKey))}</div>
+      </div>`;
+    }
+
     function renderLogin() {
       return `
-        <div class="login-form">
-          <div class="login-top">${langSelect()}</div>
-          <h2>🔖 ${esc(t('loginTitle'))}</h2>
-          <p class="hint">${esc(t('loginHint'))}</p>
-          <form id="loginForm">
-            <div class="form-group">
-              <label for="email">${esc(t('email'))}</label>
-              <input type="email" id="email" required autocomplete="username">
+        <div class="login-wrap">
+          <div class="login-card">
+            <div class="login-top">${langSelect()}</div>
+            <div class="login-brand">
+              <span class="brand-mark">E</span>
+              <h2>${esc(t('loginTitle'))}</h2>
             </div>
-            <div class="form-group">
-              <label for="password">${esc(t('password'))}</label>
-              <input type="password" id="password" required autocomplete="current-password">
-            </div>
-            <button type="submit" class="login-btn">${esc(t('login'))}</button>
-            <button type="button" class="login-btn secondary" id="btnRegister">${esc(t('register'))}</button>
-            <div id="loginError" class="error"></div>
-          </form>
+            <p class="login-hint">${esc(t('loginHint'))}</p>
+            <form id="loginForm">
+              <div class="form-group">
+                <label for="email">${esc(t('email'))}</label>
+                <input type="email" id="email" required autocomplete="username">
+              </div>
+              <div class="form-group">
+                <label for="password">${esc(t('password'))}</label>
+                <input type="password" id="password" required autocomplete="current-password">
+              </div>
+              <button type="submit" class="login-btn">${esc(t('login'))}</button>
+              <button type="button" class="login-btn secondary" id="btnRegister">${esc(t('register'))}</button>
+              <div id="loginError" class="error"></div>
+            </form>
+          </div>
         </div>
       `;
     }
 
     function renderDashboard() {
+      const navItems = Object.entries(SECTIONS).map(([key, section]) => `
+        <button class="nav-item${key === 'readLater' ? ' active' : ''}" data-tab="${key}">
+          ${ICONS[key]}
+          <span class="nav-text">${esc(t(section.title))}</span>
+          <span class="nav-count" data-count="${key}">0</span>
+        </button>
+      `).join('');
+
       return `
-        <div class="container">
-          <div class="header">
-            <h1>🔖 ${esc(t('appTitle'))}</h1>
-            <div class="user-info">
-              ${esc(t('userId'))}: ${esc(userId)} |
-              <a href="#" id="btnLogout">${esc(t('logout'))}</a>
-              ${langSelect()}
+        <div class="shell">
+          <aside class="sidebar">
+            <div class="brand">
+              <span class="brand-mark">E</span>
+              <span class="brand-name">EasyRead<span class="brand-sub">${esc(t('brandSub'))}</span></span>
             </div>
-          </div>
+            <nav class="nav">
+              <div class="nav-label">${esc(t('navLibrary'))}</div>
+              ${navItems}
+            </nav>
+            <div class="sidebar-foot">
+              ${langSelect()}
+              <div class="user-box">
+                <b>${esc(t('userId'))}</b>
+                ${esc(userId || '—')}
+                <div><a href="#" class="logout" id="btnLogout">${esc(t('logout'))}</a></div>
+              </div>
+            </div>
+          </aside>
 
-          <div class="stats" id="stats"></div>
+          <main class="main">
+            <header class="topbar">
+              <div>
+                <h1 id="pageTitle">${esc(t('tabReadLater'))}</h1>
+                <div class="sub" id="pageSub"></div>
+              </div>
+              <div class="topbar-actions">
+                <button class="btn" id="btnRefresh">${ICONS.refresh}${esc(t('refresh'))}</button>
+              </div>
+            </header>
 
-          <div class="tabs">
-            <button class="tab active" data-tab="readLater">${esc(t('tabReadLater'))}</button>
-            <button class="tab" data-tab="notes">${esc(t('tabNotes'))}</button>
-            <button class="tab" data-tab="records">${esc(t('tabRecords'))}</button>
-            <button class="tab" data-tab="snapshots">${esc(t('tabSnapshots'))}</button>
-          </div>
+            <section class="overview">
+              <div class="donut-wrap">
+                <div class="donut" id="donut"></div>
+                <div class="donut-hole"><b id="donutTotal">0</b><span>${esc(t('statTotal'))}</span></div>
+              </div>
+              <div class="legend" id="legend"></div>
+            </section>
 
-          <div class="content">
-            <div id="readLater" class="section active"></div>
-            <div id="notes" class="section"></div>
-            <div id="records" class="section"></div>
-            <div id="snapshots" class="section"></div>
-          </div>
+            <div class="grid" id="grid"></div>
+          </main>
         </div>
       `;
     }
@@ -406,161 +716,196 @@
           return;
         }
 
-        const tab = event.target.closest('.tab');
+        if (event.target.closest('#btnRefresh')) {
+          refreshAll();
+          return;
+        }
+
+        const tab = event.target.closest('.nav-item');
         if (tab) switchTab(tab.dataset.tab);
       });
     }
 
     function switchTab(name) {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
-      document.querySelectorAll('.section').forEach(section => section.classList.toggle('active', section.id === name));
-      if (name === 'readLater') loadReadLater();
-      else if (name === 'notes') loadNotes();
-      else if (name === 'records') loadRecords();
-      else if (name === 'snapshots') loadSnapshots();
+      if (!SECTIONS[name]) return;
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.tab === name));
+      document.getElementById('pageTitle').textContent = t(SECTIONS[name].title);
+      document.title = `${t(SECTIONS[name].title)} · ${t('appTitle')}`;
+      loadSection(name);
     }
 
-    // 只放行 http(s)，避免把 javascript: 之类的地址写进 href
-    function safeHref(value) {
-      try {
-        const url = new URL(value);
-        return /^https?:$/.test(url.protocol) ? url.href : null;
-      } catch {
-        return null;
+    function showSkeleton() {
+      document.getElementById('grid').innerHTML = Array.from({ length: 8 }, () => '<div class="skeleton"></div>').join('');
+    }
+
+    function showEmpty(emptyKey, hintKey) {
+      document.getElementById('grid').innerHTML = emptyState(emptyKey, hintKey);
+    }
+
+    function showError() {
+      document.getElementById('grid').innerHTML = `<div class="empty"><div class="empty-title">${esc(t('loadFailed'))}</div></div>`;
+    }
+
+    function setCount(key, value) {
+      const node = document.querySelector(`[data-count="${key}"]`);
+      if (node) node.textContent = String(value ?? 0);
+    }
+
+    function setSubtitle(text) {
+      const node = document.getElementById('pageSub');
+      if (node) node.textContent = text || '';
+    }
+
+    function renderDonut(counts) {
+      const series = [
+        { key: 'readLater', color: 'var(--blue)' },
+        { key: 'notes', color: 'var(--purple)' },
+        { key: 'records', color: 'var(--teal)' }
+      ];
+      const total = series.reduce((sum, item) => sum + (counts[item.key] || 0), 0);
+      const donut = document.getElementById('donut');
+      const legend = document.getElementById('legend');
+
+      document.getElementById('donutTotal').textContent = String(total);
+      if (!total) {
+        donut.style.background = 'conic-gradient(var(--line) 0deg 360deg)';
+      } else {
+        let acc = 0;
+        const stops = series.map(item => {
+          const start = acc / total * 360;
+          acc += counts[item.key] || 0;
+          return `${item.color} ${start.toFixed(2)}deg ${(acc / total * 360).toFixed(2)}deg`;
+        });
+        donut.style.background = `conic-gradient(${stops.join(', ')})`;
       }
-    }
 
-    function itemRow(title, url, meta, actions) {
-      const href = safeHref(url);
-      const titleHtml = href
-        ? `<a class="item-title" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a>`
-        : `<div class="item-title">${esc(title)}</div>`;
-      const urlHtml = href
-        ? `<a class="item-url" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`
-        : `<div class="item-url">${esc(url)}</div>`;
-      return `
-        <div class="list-item">
-          <div>
-            ${titleHtml}
-            ${urlHtml}
-            ${meta ? `<div class="item-meta">${esc(meta)}</div>` : ''}
-          </div>
-          <div>${actions || ''}</div>
+      legend.innerHTML = series.map(item => `
+        <div class="legend-row">
+          <span class="dot" style="background:${item.color}"></span>
+          <span class="legend-label">${esc(t(item.key === 'readLater' ? 'statReadLater' : item.key === 'notes' ? 'statNotes' : 'statRecords'))}</span>
+          <b>${counts[item.key] || 0}</b>
         </div>
-      `;
+      `).join('');
     }
 
-    async function loadStats() {
+    const state = { readLater: 0, notes: 0, records: 0, snapshots: 0 };
+
+    async function loadOverview() {
       try {
-        const [readLater, notes, records] = await Promise.all([
+        const [readLater, notes, records, snapshots] = await Promise.all([
           apiRequest('/read-later?limit=1'),
           apiRequest('/notes?limit=1'),
-          apiRequest('/records?limit=1')
+          apiRequest('/records?limit=1'),
+          apiRequest('/snapshots?limit=1')
         ]);
-
-        document.getElementById('stats').innerHTML = `
-          <div class="stat-card">
-            <h3>${readLater?.total || 0}</h3>
-            <p>${esc(t('statReadLater'))}</p>
-          </div>
-          <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-            <h3>${notes?.total || 0}</h3>
-            <p>${esc(t('statNotes'))}</p>
-          </div>
-          <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-            <h3>${records?.total || 0}</h3>
-            <p>${esc(t('statRecords'))}</p>
-          </div>
-        `;
+        state.readLater = readLater?.total || 0;
+        state.notes = notes?.total || 0;
+        state.records = records?.total || 0;
+        state.snapshots = snapshots?.total || 0;
+        Object.entries(state).forEach(([key, value]) => setCount(key, value));
+        renderDonut(state);
       } catch (error) {
-        console.error('Failed to load stats:', error);
+        console.error('Failed to load overview:', error);
       }
     }
 
-    function showLoading(id) {
-      document.getElementById(id).innerHTML = `<div class="loading">${esc(t('loading'))}</div>`;
-    }
-
-    function showEmpty(id, key) {
-      document.getElementById(id).innerHTML = `<div class="empty-state">${esc(t(key))}</div>`;
-    }
-
-    function showError(id) {
-      document.getElementById(id).innerHTML = `<div class="empty-state">${esc(t('loadFailed'))}</div>`;
-    }
-
-    async function loadReadLater() {
-      showLoading('readLater');
-      try {
-        const data = await apiRequest('/read-later?limit=50');
-        if (!data.items || data.items.length === 0) { showEmpty('readLater', 'emptyReadLater'); return; }
+    const loaders = {
+      async readLater() {
+        const data = await apiRequest('/read-later?limit=60');
+        const items = data?.items || [];
+        setCount('readLater', data?.total ?? items.length);
+        setSubtitle(`${data?.total ?? items.length} ${t('items')}`);
+        if (!items.length) return showEmpty('emptyReadLater', 'emptyReadLaterHint');
         const statusLabel = [t('statusUnread'), t('statusReading'), t('statusRead')];
-        document.getElementById('readLater').innerHTML = data.items.map(item =>
-          itemRow(item.title, item.url, statusLabel[item.status] || statusLabel[0],
-            `<button class="btn btn-danger" data-delete-readlater="${esc(item.id)}">${esc(t('delete'))}</button>`)
-        ).join('');
+        const statusChip = ['chip-blue', 'chip-amber', 'chip-teal'];
+        document.getElementById('grid').innerHTML = items.map(item => card({
+          title: item.title,
+          url: item.url,
+          tag: domainOf(item.url),
+          meta: [
+            chip(statusLabel[item.status] || statusLabel[0], statusChip[item.status] || 'chip-blue')
+          ],
+          actions: `<button class="btn btn-danger btn-icon" data-delete-readlater="${esc(item.id)}" title="${esc(t('delete'))}">${ICONS.trash}</button>`
+        })).join('');
+      },
+
+      async notes() {
+        const data = await apiRequest('/notes?limit=60');
+        const pages = data?.pages || [];
+        setCount('notes', data?.total ?? pages.length);
+        setSubtitle(`${data?.total ?? pages.length} ${t('items')}`);
+        if (!pages.length) return showEmpty('emptyNotes', 'emptyNotesHint');
+        document.getElementById('grid').innerHTML = pages.map(page => card({
+          title: page.title,
+          url: page.url,
+          tag: domainOf(page.url),
+          meta: [chip(`${page.notes_count} ${t('notesCount')}`, 'chip-purple')]
+        })).join('');
+      },
+
+      async records() {
+        const data = await apiRequest('/records?limit=60');
+        const records = data?.records || [];
+        setCount('records', data?.total ?? records.length);
+        setSubtitle(`${data?.total ?? records.length} ${t('items')}`);
+        if (!records.length) return showEmpty('emptyRecords', 'emptyRecordsHint');
+        document.getElementById('grid').innerHTML = records.map(record => card({
+          title: record.title,
+          url: record.url,
+          tag: domainOf(record.url),
+          meta: [chip(`${t('visits')} ${record.visitCount}`, 'chip-teal')]
+        })).join('');
+      },
+
+      async snapshots() {
+        const data = await apiRequest('/snapshots?limit=60');
+        const snapshots = data?.snapshots || [];
+        setCount('snapshots', data?.total ?? snapshots.length);
+        setSubtitle(`${data?.total ?? snapshots.length} ${t('items')}`);
+        if (!snapshots.length) return showEmpty('emptySnapshots', 'emptySnapshotsHint');
+        document.getElementById('grid').innerHTML = snapshots.map(snap => card({
+          title: snap.title,
+          url: snap.url,
+          tag: `${String(snap.format || '').toUpperCase()} · ${(snap.fileSize / 1024).toFixed(0)} KB`,
+          meta: [chip(`${t('format')} ${snap.format}`, 'chip-amber')],
+          actions: `<a class="btn btn-icon" href="${esc(snap.downloadUrl)}" title="${esc(t('download'))}">${ICONS.download}</a>
+                   <button class="btn btn-danger btn-icon" data-delete-snapshot="${esc(snap.id)}" title="${esc(t('delete'))}">${ICONS.trash}</button>`
+        })).join('');
+      }
+    };
+
+    async function loadSection(name) {
+      showSkeleton();
+      try {
+        await loaders[name]();
       } catch (error) {
-        showError('readLater');
+        showError();
       }
     }
 
-    async function loadNotes() {
-      showLoading('notes');
-      try {
-        const data = await apiRequest('/notes?limit=50');
-        if (!data.pages || data.pages.length === 0) { showEmpty('notes', 'emptyNotes'); return; }
-        document.getElementById('notes').innerHTML = data.pages.map(page =>
-          itemRow(page.title, page.url, `${page.notes_count} ${t('notesCount')}`)
-        ).join('');
-      } catch (error) {
-        showError('notes');
-      }
-    }
-
-    async function loadRecords() {
-      showLoading('records');
-      try {
-        const data = await apiRequest('/records?limit=50');
-        if (!data.records || data.records.length === 0) { showEmpty('records', 'emptyRecords'); return; }
-        document.getElementById('records').innerHTML = data.records.map(record =>
-          itemRow(record.title, record.url, `${t('visits')}: ${record.visitCount}`)
-        ).join('');
-      } catch (error) {
-        showError('records');
-      }
-    }
-
-    async function loadSnapshots() {
-      showLoading('snapshots');
-      try {
-        const data = await apiRequest('/snapshots?limit=50');
-        if (!data.snapshots || data.snapshots.length === 0) { showEmpty('snapshots', 'emptySnapshots'); return; }
-        document.getElementById('snapshots').innerHTML = data.snapshots.map(snap =>
-          itemRow(snap.title, snap.url,
-            `${t('format')}: ${snap.format} | ${t('size')}: ${(snap.fileSize / 1024).toFixed(1)} KB`,
-            `<a class="btn btn-primary" href="${esc(snap.downloadUrl)}">${esc(t('download'))}</a>
-             <button class="btn btn-danger" data-delete-snapshot="${esc(snap.id)}">${esc(t('delete'))}</button>`)
-        ).join('');
-      } catch (error) {
-        showError('snapshots');
-      }
+    function refreshAll() {
+      const active = document.querySelector('.nav-item.active');
+      loadOverview();
+      if (active) loadSection(active.dataset.tab);
     }
 
     function handleActions() {
       document.addEventListener('click', async (event) => {
-        const readLaterId = event.target.dataset?.deleteReadlater;
+        const readLaterId = event.target.closest('[data-delete-readlater]')?.dataset.deleteReadlater;
         if (readLaterId) {
           if (!confirm(t('confirmItem'))) return;
           await apiRequest(`/read-later/${readLaterId}`, { method: 'DELETE' });
-          loadReadLater();
+          loadOverview();
+          loadSection('readLater');
           return;
         }
 
-        const snapshotId = event.target.dataset?.deleteSnapshot;
+        const snapshotId = event.target.closest('[data-delete-snapshot]')?.dataset.deleteSnapshot;
         if (snapshotId) {
           if (!confirm(t('confirmSnapshot'))) return;
           await apiRequest(`/snapshots/${snapshotId}`, { method: 'DELETE' });
-          loadSnapshots();
+          loadOverview();
+          loadSection('snapshots');
         }
       });
 
@@ -582,8 +927,9 @@
       }
 
       document.getElementById('app').innerHTML = renderDashboard();
-      loadStats();
-      loadReadLater();
+      renderDonut(state);
+      loadOverview();
+      loadSection('readLater');
     }
 
     handleSubmit();

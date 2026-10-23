@@ -26,7 +26,15 @@ snapshots.get('/', async (c) => {
     params.push(limit, offset);
     
     const result = await c.env.DB.prepare(query).bind(...params).all();
-    
+
+    let countQuery = 'SELECT COUNT(*) as total FROM snapshots WHERE user_id = ?';
+    const countParams: any[] = [userId];
+    if (url) {
+      countQuery += ' AND url = ?';
+      countParams.push(url);
+    }
+    const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first();
+
     const snapshots = result.results?.map(row => ({
       id: row.id,
       url: row.url,
@@ -37,7 +45,7 @@ snapshots.get('/', async (c) => {
       downloadUrl: `${new URL(c.req.url).origin}/api/snapshots/${row.id}/download`
     })) || [];
     
-    return jsonResponse({ snapshots });
+    return jsonResponse({ snapshots, total: (countResult?.total as number) || 0 });
   } catch (error) {
     console.error('Get snapshots error:', error);
     return errorResponse('SERVER_ERROR', 'Failed to fetch snapshots', 500);
