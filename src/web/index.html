@@ -1024,7 +1024,7 @@
         }));
       },
 
-      favorites: {
+      async favorites() {
         const data = await apiRequest('/favorites?limit=60');
         const items = data?.items || [];
         const total = data?.total ?? items.length;
