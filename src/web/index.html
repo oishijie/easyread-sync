@@ -435,6 +435,7 @@
     const API_BASE = window.location.origin + '/api';
     let token = localStorage.getItem('easyread_token');
     let userId = localStorage.getItem('easyread_user_id');
+    let userEmail = localStorage.getItem('easyread_email');
     let lang = localStorage.getItem('easyread_lang')
       || ((navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en');
     let view = localStorage.getItem('easyread_view') === 'list' ? 'list' : 'cards';
@@ -752,8 +753,8 @@
             <div class="sidebar-foot">
               ${langSelect()}
               <div class="user-box">
-                <b>${esc(t('userId'))}</b>
-                ${esc(userId || '—')}
+                <b>${esc(t(userEmail ? 'email' : 'userId'))}</b>
+                ${esc(userEmail || userId || '—')}
                 <div><a href="#" class="logout" id="btnLogout">${esc(t('logout'))}</a></div>
               </div>
             </div>
@@ -806,6 +807,7 @@
       if (response.status === 401 && !isAuthCall) {
         localStorage.removeItem('easyread_token');
         localStorage.removeItem('easyread_user_id');
+        localStorage.removeItem('easyread_email');
         location.reload();
         return null;
       }
@@ -851,6 +853,7 @@
           });
           localStorage.setItem('easyread_token', data.token);
           localStorage.setItem('easyread_user_id', data.user_id);
+          localStorage.setItem('easyread_email', email);
           location.reload();
         } catch (error) {
           setLoginError(describeError(error));
@@ -875,6 +878,7 @@
             });
             localStorage.setItem('easyread_token', data.token);
             localStorage.setItem('easyread_user_id', data.user_id);
+            localStorage.setItem('easyread_email', email);
             location.reload();
           } catch (error) {
             setLoginError(describeError(error));
@@ -886,6 +890,7 @@
           event.preventDefault();
           localStorage.removeItem('easyread_token');
           localStorage.removeItem('easyread_user_id');
+          localStorage.removeItem('easyread_email');
           location.reload();
           return;
         }
